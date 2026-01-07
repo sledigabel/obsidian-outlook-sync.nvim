@@ -3,9 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"runtime"
-	"strings"
 )
 
 // Config holds application configuration
@@ -15,11 +12,12 @@ type Config struct {
 }
 
 // Load loads configuration from Keychain (macOS) or environment variables
+// Priority: 1) Keychain (macOS only), 2) Environment variables
 func Load() (*Config, error) {
 	cfg := &Config{}
 
-	// Try to load from Keychain first (macOS only)
-	if runtime.GOOS == "darwin" {
+	// Try to load from Keychain first (macOS only, via build tags)
+	if keychainAvailable() {
 		clientID, err := getFromKeychain("client-id")
 		if err == nil && clientID != "" {
 			cfg.ClientID = clientID
@@ -48,29 +46,4 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
-}
-
-// getFromKeychain retrieves a value from macOS Keychain using the security CLI
-func getFromKeychain(account string) (string, error) {
-	serviceName := "com.github.obsidian-outlook-sync"
-
-	cmd := exec.Command("security", "find-generic-password",
-		"-s", serviceName,
-		"-a", account,
-		"-w") // Print password only
-
-	output, err := cmd.Output()
-	if err != nil {
-		// Exit code 44 means item not found (not an error, just not present)
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 44 {
-			return "", nil
-		}
-		// Exit code 36 means user denied access
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 36 {
-			return "", fmt.Errorf("Keychain access denied. Please grant access to the keychain or use environment variables")
-		}
-		return "", fmt.Errorf("failed to read from Keychain: %w", err)
-	}
-
-	return strings.TrimSpace(string(output)), nil
 }
