@@ -166,9 +166,11 @@ Then restart Neovim to load the updated Lua plugin files.
 
 ### Step 3: Set Up Authentication
 
-The plugin now supports automatic OAuth2 device-code flow authentication! You have two options:
+The plugin now supports automatic OAuth2 device-code flow authentication! You have multiple options depending on your access level:
 
-#### Option 1: Automatic Device-Code Flow (Recommended)
+#### Option 1: Automatic Device-Code Flow (Recommended - Requires Azure AD Access)
+
+This is the best option if you have access to Azure AD App Registrations.
 
 1. **Set up Azure AD App Registration** (one-time setup):
    - Go to [Azure Portal](https://portal.azure.com)
@@ -226,23 +228,50 @@ The plugin now supports automatic OAuth2 device-code flow authentication! You ha
    - Automatically refreshes when expired
    - No need to re-authenticate unless token is revoked
 
-#### Option 2: Manual Access Token (Legacy/Testing)
+#### Option 2: Request IT Admin to Create App Registration (No Azure Access)
 
-For testing or if device-code flow doesn't work:
+If you don't have access to Azure AD App Registrations, ask your IT administrator to:
+
+1. Create an Azure AD app registration with:
+   - Name: "Outlook MD CLI" (or similar)
+   - Delegated permissions: `Calendars.Read`, `offline_access`
+   - Enable "Allow public client flows"
+
+2. Provide you with:
+   - **Application (client) ID**
+   - **Directory (tenant) ID**
+
+3. Then follow the credential storage steps from Option 1 (Step 2-4)
+
+#### Option 3: Manual Access Token (No Azure Access - Quick Setup)
+
+For immediate testing or if you can't set up device-code flow:
 
 ```bash
 # Add to ~/.zshrc or ~/.bashrc
 export OUTLOOK_MD_ACCESS_TOKEN="your-access-token-here"
 ```
 
-**Getting a manual token** (temporary, expires in ~1 hour):
+**Getting a manual token** (expires in ~1 hour):
 1. Go to [Microsoft Graph Explorer](https://developer.microsoft.com/en-us/graph/graph-explorer)
 2. Sign in → Try `/me/calendar` endpoint
 3. Open DevTools (F12) → Network tab
 4. Find the request → Copy `Authorization: Bearer <token>` value
 5. Set as `OUTLOOK_MD_ACCESS_TOKEN`
 
-**Note**: Manual tokens expire quickly. Use device-code flow for production use.
+**Pros**:
+- ✅ Works immediately
+- ✅ No Azure AD setup required
+
+**Cons**:
+- ❌ Token expires every ~1 hour
+- ❌ Must manually refresh
+
+**Tip**: Create a shell alias to quickly get a new token:
+```bash
+# Add to ~/.zshrc
+alias outlook-token='open "https://developer.microsoft.com/en-us/graph/graph-explorer"'
+```
 
 ## Usage
 
