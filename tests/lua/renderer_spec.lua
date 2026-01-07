@@ -179,4 +179,153 @@ describe('renderer', function()
       assert.is_true(morning_pos < lunch_pos)
     end)
   end)
+
+  -- Phase 6: User Story 4 - Attendee Information Display
+  describe('render_organizer', function()
+    it('should render organizer with name and email', function()
+      local event = {
+        id = 'test-org-1',
+        subject = 'Team Meeting',
+        isAllDay = false,
+        start = '2026-01-07T10:00:00',
+        ['end'] = '2026-01-07T11:00:00',
+        location = '',
+        organizer = {
+          name = 'Alice Smith',
+          email = 'alice.smith@example.com'
+        },
+        attendees = {}
+      }
+
+      local lines = renderer.render_event(event)
+      local content = table.concat(lines, '\n')
+
+      -- Should have Organizer section with name
+      assert.matches('Organizer:', content)
+      assert.matches('Alice Smith', content)
+    end)
+
+    it('should render organizer with email when name is missing', function()
+      local event = {
+        id = 'test-org-2',
+        subject = 'Meeting',
+        isAllDay = false,
+        start = '2026-01-07T10:00:00',
+        ['end'] = '2026-01-07T11:00:00',
+        location = '',
+        organizer = {
+          name = '',
+          email = 'organizer@example.com'
+        },
+        attendees = {}
+      }
+
+      local lines = renderer.render_event(event)
+      local content = table.concat(lines, '\n')
+
+      -- Should show email when name is empty
+      assert.matches('organizer@example.com', content)
+    end)
+  end)
+
+  describe('render_attendees_truncation', function()
+    it('should render all attendees when 15 or fewer', function()
+      -- Create exactly 15 attendees
+      local attendees = {}
+      for i = 1, 15 do
+        table.insert(attendees, {
+          name = 'Attendee ' .. i,
+          email = 'attendee' .. i .. '@example.com',
+          type = 'required'
+        })
+      end
+
+      local event = {
+        id = 'test-trunc-1',
+        subject = 'Meeting',
+        isAllDay = false,
+        start = '2026-01-07T10:00:00',
+        ['end'] = '2026-01-07T11:00:00',
+        location = '',
+        organizer = { name = 'Organizer', email = 'org@example.com' },
+        attendees = attendees
+      }
+
+      local lines = renderer.render_event(event)
+      local content = table.concat(lines, '\n')
+
+      -- All 15 should be listed
+      assert.matches('Attendee 1', content)
+      assert.matches('Attendee 15', content)
+
+      -- Should NOT have truncation message
+      assert.is_not.matches('and %d+ more', content)
+    end)
+
+    it('should truncate attendees when more than 15', function()
+      -- Create 20 attendees
+      local attendees = {}
+      for i = 1, 20 do
+        table.insert(attendees, {
+          name = 'Attendee ' .. i,
+          email = 'attendee' .. i .. '@example.com',
+          type = 'required'
+        })
+      end
+
+      local event = {
+        id = 'test-trunc-2',
+        subject = 'Large Meeting',
+        isAllDay = false,
+        start = '2026-01-07T10:00:00',
+        ['end'] = '2026-01-07T11:00:00',
+        location = '',
+        organizer = { name = 'Organizer', email = 'org@example.com' },
+        attendees = attendees
+      }
+
+      local lines = renderer.render_event(event)
+      local content = table.concat(lines, '\n')
+
+      -- First 15 should be listed
+      assert.matches('Attendee 1', content)
+      assert.matches('Attendee 15', content)
+
+      -- Attendee 16-20 should NOT appear individually
+      assert.is_not.matches('Attendee 16', content)
+      assert.is_not.matches('Attendee 20', content)
+
+      -- Should have truncation message for remaining 5
+      assert.matches('and 5 more', content)
+    end)
+
+    it('should show correct count in truncation message', function()
+      -- Create 100 attendees
+      local attendees = {}
+      for i = 1, 100 do
+        table.insert(attendees, {
+          name = 'User ' .. i,
+          email = 'user' .. i .. '@example.com',
+          type = 'required'
+        })
+      end
+
+      local event = {
+        id = 'test-trunc-3',
+        subject = 'Conference',
+        isAllDay = false,
+        start = '2026-01-07T10:00:00',
+        ['end'] = '2026-01-07T11:00:00',
+        location = '',
+        organizer = { name = 'Organizer', email = 'org@example.com' },
+        attendees = attendees
+      }
+
+      local lines = renderer.render_event(event)
+      local content = table.concat(lines, '\n')
+
+      -- Should show "and 85 more" (100 - 15 = 85)
+      assert.matches('and 85 more', content)
+    end)
+  end)
 end)

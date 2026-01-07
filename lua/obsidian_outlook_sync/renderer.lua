@@ -4,23 +4,30 @@
 local M = {}
 
 -- render_event converts a single event to markdown lines
--- @param event table: CalendarEvent from CLI output
+-- @param event table: CalendarEvent from CLI output (may have notes and deleted flag)
 -- @return table: array of markdown line strings
 function M.render_event(event)
 	local lines = {}
 
+	-- Add EVENT_ID marker (for Phase 4 merging)
+	if event.id then
+		table.insert(lines, string.format('<!-- EVENT_ID: %s -->', event.id))
+	end
+
 	-- Format event header
 	local header
+	local deleted_marker = event.deleted and ' [deleted]' or ''
+
 	if event.isAllDay then
 		-- All-day event
 		local subject = event.subject ~= '' and event.subject or '(Untitled Event)'
-		header = string.format('## All Day - %s', subject)
+		header = string.format('## All Day - %s%s', subject, deleted_marker)
 	else
 		-- Timed event - parse times and format
 		local start_time = M._format_time(event.start)
 		local end_time = M._format_time(event['end'])
 		local subject = event.subject ~= '' and event.subject or '(Untitled Event)'
-		header = string.format('## %s-%s %s', start_time, end_time, subject)
+		header = string.format('## %s-%s %s%s', start_time, end_time, subject, deleted_marker)
 	end
 
 	table.insert(lines, header)
@@ -30,23 +37,59 @@ function M.render_event(event)
 		table.insert(lines, string.format('**Location:** %s', event.location))
 	end
 
-	-- Add organizer
-	if event.organizer and event.organizer.name ~= '' then
-		table.insert(lines, string.format('**Organizer:** %s', event.organizer.name))
+	-- Add Agenda section (FR-034)
+	table.insert(lines, '')
+	table.insert(lines, '### Agenda')
+	table.insert(lines, '- <auto> (Add agenda items here)')
+
+	-- Add Organizer section (FR-036)
+	table.insert(lines, '')
+	table.insert(lines, '### Organizer')
+	if event.organizer then
+		local org_display = event.organizer.name ~= '' and event.organizer.name or event.organizer.email
+		if org_display ~= '' then
+			table.insert(lines, string.format('- <auto> %s <%s>', event.organizer.name, event.organizer.email))
+		end
 	end
 
-	-- Add attendees if present
+	-- Add Invitees section (FR-037, FR-038)
+	table.insert(lines, '')
+	table.insert(lines, '### Invitees')
 	if event.attendees and #event.attendees > 0 then
-		local attendee_names = {}
-		for _, attendee in ipairs(event.attendees) do
-			if attendee.name and attendee.name ~= '' then
-				table.insert(attendee_names, attendee.name)
-			end
+		local max_display = 15
+		local num_to_display = math.min(#event.attendees, max_display)
+
+		-- Display first 15 attendees
+		for i = 1, num_to_display do
+			local attendee = event.attendees[i]
+			table.insert(lines, string.format('- <auto> %s <%s> (%s)',
+				attendee.name, attendee.email, attendee.type))
 		end
-		if #attendee_names > 0 then
-			table.insert(lines, string.format('**Attendees:** %s', table.concat(attendee_names, ', ')))
+
+		-- Add truncation summary if more than 15
+		if #event.attendees > max_display then
+			local remaining = #event.attendees - max_display
+			table.insert(lines, string.format('- <auto> …and %d more (total %d)',
+				remaining, #event.attendees))
 		end
+	else
+		table.insert(lines, '- <auto> None')
 	end
+
+	-- Add notes pocket (preserved from old or scaffold for new)
+	table.insert(lines, '')
+	table.insert(lines, '### Notes')
+	table.insert(lines, '<!-- NOTES_START -->')
+	if event.notes then
+		-- Preserve existing notes verbatim (FR-020)
+		for _, note_line in ipairs(event.notes) do
+			table.insert(lines, note_line)
+		end
+	else
+		-- Scaffold for new events (FR-022)
+		table.insert(lines, '')
+	end
+	table.insert(lines, '<!-- NOTES_END -->')
 
 	-- Add blank line after event
 	table.insert(lines, '')

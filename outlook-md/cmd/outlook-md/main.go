@@ -5,9 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/obsidian-outlook-sync/outlook-md/internal/auth"
 	"github.com/obsidian-outlook-sync/outlook-md/internal/calendar"
+	"github.com/obsidian-outlook-sync/outlook-md/internal/config"
 	"github.com/obsidian-outlook-sync/outlook-md/internal/output"
 	"github.com/obsidian-outlook-sync/outlook-md/pkg/schema"
 )
@@ -112,18 +115,10 @@ func handleTodayCommand(format string, timezone string) error {
 	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	endOfDay := startOfDay.Add(24 * time.Hour)
 
-	// TODO: Load configuration (Phase 5)
-	// For now, we'll skip config loading since we're using env var directly
-	// cfg, err := config.Load()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to load configuration: %w", err)
-	// }
-
-	// TODO: Implement authentication (Phase 5)
-	// For now, assume we have a valid access token
-	accessToken := os.Getenv("OUTLOOK_MD_ACCESS_TOKEN")
-	if accessToken == "" {
-		return fmt.Errorf("no access token available. Set OUTLOOK_MD_ACCESS_TOKEN environment variable or complete device-code flow authentication (not yet implemented)")
+	// Get access token (either from env var or via OAuth2 device-code flow)
+	accessToken, err := getAccessToken()
+	if err != nil {
+		return fmt.Errorf("authentication failed: %w", err)
 	}
 
 	// Create Graph API client
@@ -139,7 +134,7 @@ func handleTodayCommand(format string, timezone string) error {
 	// Build output
 	cliOutput := &schema.CLIOutput{
 		Version:  1,
-		Timezone: actualTimezone,  // Use actual timezone in output
+		Timezone: actualTimezone, // Use actual timezone in output
 		Window: schema.TimeWindow{
 			Start: startOfDay,
 			End:   endOfDay,
@@ -153,4 +148,71 @@ func handleTodayCommand(format string, timezone string) error {
 	}
 
 	return nil
+}
+
+// getAccessToken retrieves an OAuth2 access token
+// Priority: 1) Environment variable, 2) Cached token, 3) Device-code flow
+func getAccessToken() (string, error) {
+	// First, check for env var (for testing and manual override)
+	envToken := os.Getenv("OUTLOOK_MD_ACCESS_TOKEN")
+	if envToken != "" {
+		return envToken, nil
+	}
+
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		return "", fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	// Determine cache file location
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory: %w", err)
+	}
+	cacheDir := filepath.Join(homeDir, ".outlook-md")
+	cacheFile := filepath.Join(cacheDir, "token.json")
+
+	// Create cache directory if it doesn't exist
+	if err := os.MkdirAll(cacheDir, 0700); err != nil {
+		return "", fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	// Create token cache
+	tokenCache := auth.NewTokenCache(cacheFile)
+
+	// Try to load cached token
+	token, err := tokenCache.Load()
+	if err == nil {
+		// Token loaded successfully, check if it needs refresh
+		tokenSource := auth.NewTokenSource(token, cfg.ClientID, cfg.TenantID, tokenCache)
+		refreshedToken, err := tokenSource.Token()
+		if err != nil {
+			// Token refresh failed, need to re-authenticate
+			fmt.Fprintf(os.Stderr, "Warning: Failed to refresh token: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Re-authenticating...\n\n")
+		} else {
+			// Token is valid or was refreshed successfully
+			return refreshedToken.AccessToken, nil
+		}
+	} else if !os.IsNotExist(err) {
+		// Unexpected error loading cache (not just "file not found")
+		return "", fmt.Errorf("failed to load token cache: %w", err)
+	}
+
+	// No cached token or refresh failed - initiate device code flow
+	authenticator := auth.NewDeviceCodeAuthenticator(cfg.ClientID, cfg.TenantID)
+	ctx := context.Background()
+	token, err = authenticator.Authenticate(ctx)
+	if err != nil {
+		return "", fmt.Errorf("device code authentication failed: %w", err)
+	}
+
+	// Save token to cache
+	if err := tokenCache.Save(token); err != nil {
+		// Log warning but don't fail - we have a valid token
+		fmt.Fprintf(os.Stderr, "Warning: Failed to save token to cache: %v\n", err)
+	}
+
+	return token.AccessToken, nil
 }

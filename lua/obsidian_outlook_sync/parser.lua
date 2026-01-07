@@ -6,6 +6,9 @@ local M = {}
 -- Marker constants
 M.AGENDA_START = '<!-- AGENDA_START -->'
 M.AGENDA_END = '<!-- AGENDA_END -->'
+M.EVENT_ID_PREFIX = '<!-- EVENT_ID: '
+M.NOTES_START = '<!-- NOTES_START -->'
+M.NOTES_END = '<!-- NOTES_END -->'
 
 -- find_managed_region searches for AGENDA_START and AGENDA_END markers
 -- @param lines table: array of line strings
@@ -57,6 +60,102 @@ function M.replace_managed_region(bufnr, start_line, end_line, new_lines)
 	vim.api.nvim_buf_set_lines(bufnr, start_idx, end_idx, false, replacement)
 
 	return true
+end
+
+-- extract_event_id extracts event ID from EVENT_ID marker
+-- @param line string: line containing EVENT_ID marker
+-- @return string|nil: event ID or nil if not found
+function M.extract_event_id(line)
+	local prefix_start = line:find(M.EVENT_ID_PREFIX, 1, true)
+	if not prefix_start then
+		return nil
+	end
+
+	local id_start = prefix_start + #M.EVENT_ID_PREFIX
+	local id_end = line:find(' -->', id_start, true)
+	if not id_end then
+		return nil
+	end
+
+	return line:sub(id_start, id_end - 1)
+end
+
+-- extract_event_with_notes extracts a single event with its notes pocket
+-- @param lines table: array of all lines
+-- @param start_idx number: 1-indexed start of event block
+-- @param end_idx number: 1-indexed end of event block
+-- @return table: {id=string, notes=table|nil, start_line=number, end_line=number}
+function M.extract_event_with_notes(lines, start_idx, end_idx)
+	local event = {
+		start_line = start_idx,
+		end_line = end_idx,
+		id = nil,
+		notes = nil
+	}
+
+	local notes_start = nil
+	local notes_end = nil
+
+	for i = start_idx, end_idx do
+		local line = lines[i]
+
+		-- Extract EVENT_ID
+		if not event.id then
+			event.id = M.extract_event_id(line)
+		end
+
+		-- Find notes pocket boundaries
+		if line:find(M.NOTES_START, 1, true) then
+			notes_start = i
+		elseif line:find(M.NOTES_END, 1, true) then
+			notes_end = i
+			break
+		end
+	end
+
+	-- Extract notes content if pocket exists
+	if notes_start and notes_end then
+		event.notes = {}
+		for i = notes_start + 1, notes_end - 1 do
+			table.insert(event.notes, lines[i])
+		end
+	end
+
+	return event
+end
+
+-- parse_managed_region_events parses all events from managed region
+-- @param lines table: array of all lines
+-- @param start_line number: 1-indexed AGENDA_START line
+-- @param end_line number: 1-indexed AGENDA_END line
+-- @return table: array of event objects
+function M.parse_managed_region_events(lines, start_line, end_line)
+	local events = {}
+	local current_event_start = nil
+
+	for i = start_line + 1, end_line - 1 do
+		local line = lines[i]
+
+		-- Check if this line starts a new event
+		if line:find(M.EVENT_ID_PREFIX, 1, true) then
+			-- Save previous event if exists
+			if current_event_start then
+				local event = M.extract_event_with_notes(lines, current_event_start, i - 1)
+				table.insert(events, event)
+			end
+
+			-- Start new event
+			current_event_start = i
+		end
+	end
+
+	-- Save last event
+	if current_event_start then
+		local event = M.extract_event_with_notes(lines, current_event_start, end_line - 1)
+		table.insert(events, event)
+	end
+
+	return events
 end
 
 return M

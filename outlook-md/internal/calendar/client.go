@@ -172,6 +172,9 @@ func parseCalendarEvents(graphEvents []graphEvent, timezone string) ([]schema.Ca
 			}
 		}
 
+		// Sort attendees deterministically per FR-026
+		sortAttendees(attendees)
+
 		// Build event
 		event := schema.CalendarEvent{
 			ID:       ge.ID,
