@@ -1,0 +1,246 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/obsidian-outlook-sync/cli-plugin-contract/v1",
+  "title": "Outlook-MD CLI Output Schema",
+  "description": "Contract between outlook-md Go CLI and obsidian-outlook-sync Neovim plugin (Version 1)",
+  "type": "object",
+  "required": ["version", "timezone", "window", "events"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Plugin must validate and reject unsupported versions."
+    },
+    "timezone": {
+      "type": "string",
+      "pattern": "^[A-Z][a-zA-Z0-9/_+-]+$",
+      "description": "IANA timezone identifier (e.g., America/New_York, Europe/Paris, UTC)",
+      "examples": ["America/New_York", "Europe/London", "Asia/Tokyo", "UTC"]
+    },
+    "window": {
+      "type": "object",
+      "required": ["start", "end"],
+      "description": "Query time range for calendar events",
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Range start time in RFC3339 format (inclusive)"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Range end time in RFC3339 format (exclusive)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "events": {
+      "type": "array",
+      "description": "Array of calendar events (may be empty if no events in window)",
+      "items": {
+        "type": "object",
+        "required": ["id", "subject", "isAllDay", "start", "end", "location", "organizer", "attendees"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique Microsoft Graph event identifier (used for matching across refreshes)"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Event title/subject (may be empty string, never null)"
+          },
+          "isAllDay": {
+            "type": "boolean",
+            "description": "True if event spans entire day(s) without specific times"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Event start time in RFC3339 format with timezone"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Event end time in RFC3339 format with timezone"
+          },
+          "location": {
+            "type": "string",
+            "description": "Event location/room (may be empty string, never null)"
+          },
+          "organizer": {
+            "type": "object",
+            "required": ["name", "email"],
+            "description": "Event organizer (person who created the event)",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Organizer display name (may be empty)"
+              },
+              "email": {
+                "type": "string",
+                "description": "Organizer email address (may be empty)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "attendees": {
+            "type": "array",
+            "description": "List of event attendees, sorted deterministically (may be empty)",
+            "items": {
+              "type": "object",
+              "required": ["name", "email", "type"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Attendee display name (may be empty)"
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Attendee email address (may be empty)"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["required", "optional", "resource"],
+                  "description": "Attendee type: required (must attend), optional (invited), resource (room/equipment)"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "versioning": {
+      "description": "Schema Versioning Strategy",
+      "rules": [
+        "Major version increments indicate breaking changes (plugin must support explicitly)",
+        "Minor version increments add optional fields (forward compatible via additionalProperties: true)",
+        "Plugin MUST check version field and reject unsupported major versions",
+        "Plugin MUST ignore unknown fields for forward compatibility",
+        "CLI MUST include version field in all responses"
+      ]
+    },
+    "exitCodes": {
+      "description": "CLI Exit Codes",
+      "codes": {
+        "0": "Success (valid JSON on stdout)",
+        "1": "General error (error message on stderr)",
+        "2": "Authentication failure (device code URL or re-auth instructions on stderr)",
+        "3": "Configuration error (missing Keychain entries, invalid config)",
+        "4": "Network failure (cannot reach Microsoft Graph API)"
+      }
+    },
+    "commandInterface": {
+      "description": "CLI Command Interface",
+      "commands": [
+        {
+          "command": "outlook-md today --format json --tz <IANA_TIMEZONE>",
+          "description": "Fetch today's events (00:00-24:00 in specified timezone)",
+          "example": "outlook-md today --format json --tz America/New_York"
+        },
+        {
+          "command": "outlook-md range <START_RFC3339> <END_RFC3339> --format json --tz <IANA_TIMEZONE>",
+          "description": "Fetch events in custom time range",
+          "example": "outlook-md range 2026-01-07T00:00:00Z 2026-01-08T00:00:00Z --format json --tz UTC"
+        }
+      ]
+    },
+    "errorHandling": {
+      "description": "Error Handling Contract",
+      "rules": [
+        "CLI writes errors only to stderr (never stdout when --format json)",
+        "Error messages must include: what failed, why, what to do next",
+        "Plugin captures stderr and displays to user if CLI returns non-zero",
+        "Plugin must never modify buffer if CLI returns non-zero exit code"
+      ]
+    },
+    "sortingRules": {
+      "description": "Attendee Sorting Rules (Deterministic)",
+      "order": [
+        "1. Primary sort: type (required < optional < resource)",
+        "2. Secondary sort: email address (case-insensitive, lowercase comparison)",
+        "3. Tertiary sort: name (case-insensitive, lowercase comparison)"
+      ],
+      "example": [
+        {"name": "Alice", "email": "alice@example.com", "type": "required"},
+        {"name": "Bob", "email": "bob@example.com", "type": "required"},
+        {"name": "Carol", "email": "carol@example.com", "type": "optional"}
+      ]
+    }
+  },
+  "examples": [
+    {
+      "description": "Successful response with events",
+      "data": {
+        "version": 1,
+        "timezone": "America/New_York",
+        "window": {
+          "start": "2026-01-07T00:00:00-05:00",
+          "end": "2026-01-08T00:00:00-05:00"
+        },
+        "events": [
+          {
+            "id": "AAMkAGI2THVSAAA=",
+            "subject": "Team Standup",
+            "isAllDay": false,
+            "start": "2026-01-07T09:00:00-05:00",
+            "end": "2026-01-07T09:30:00-05:00",
+            "location": "Conference Room A",
+            "organizer": {
+              "name": "Alice Smith",
+              "email": "alice@example.com"
+            },
+            "attendees": [
+              {"name": "Bob Jones", "email": "bob@example.com", "type": "required"},
+              {"name": "Carol White", "email": "carol@example.com", "type": "optional"}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "description": "Empty events (no events in window)",
+      "data": {
+        "version": 1,
+        "timezone": "UTC",
+        "window": {
+          "start": "2026-01-07T00:00:00Z",
+          "end": "2026-01-08T00:00:00Z"
+        },
+        "events": []
+      }
+    },
+    {
+      "description": "All-day event",
+      "data": {
+        "version": 1,
+        "timezone": "America/Los_Angeles",
+        "window": {
+          "start": "2026-01-07T00:00:00-08:00",
+          "end": "2026-01-08T00:00:00-08:00"
+        },
+        "events": [
+          {
+            "id": "AAMkAGI2ALLDAY=",
+            "subject": "Company Holiday",
+            "isAllDay": true,
+            "start": "2026-01-07T00:00:00-08:00",
+            "end": "2026-01-08T00:00:00-08:00",
+            "location": "",
+            "organizer": {
+              "name": "HR Department",
+              "email": "hr@example.com"
+            },
+            "attendees": []
+          }
+        ]
+      }
+    }
+  ]
+}
