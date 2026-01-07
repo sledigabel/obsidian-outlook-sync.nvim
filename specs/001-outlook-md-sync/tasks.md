@@ -26,14 +26,14 @@ Per plan.md project structure:
 
 **Purpose**: Project initialization and basic structure for both CLI and plugin components
 
-- [ ] T001 Create Go CLI project structure: outlook-md/{cmd/outlook-md,internal/{auth,calendar,output,config},pkg/schema}/
-- [ ] T002 Create Neovim plugin structure: lua/obsidian_outlook_sync/{init,cli,parser,merger,renderer,config}.lua
-- [ ] T003 [P] Initialize Go module in outlook-md/go.mod with Go 1.21+
-- [ ] T004 [P] Create Makefile at repository root with build, test, clean, install targets
-- [ ] T005 [P] Create .gitignore with bin/, ~/.outlook-md/token-cache, *.log entries
-- [ ] T006 [P] Create test directories: tests/{go/{auth,calendar,output},lua/}
-- [ ] T007 [P] Create contracts directory: specs/001-outlook-md-sync/contracts/ (already exists)
-- [ ] T008 [P] Create testdata directory for test fixtures: tests/go/testdata/
+- [X] T001 Create Go CLI project structure: outlook-md/{cmd/outlook-md,internal/{auth,calendar,output,config},pkg/schema}/
+- [X] T002 Create Neovim plugin structure: lua/obsidian_outlook_sync/{init,cli,parser,merger,renderer,config}.lua
+- [X] T003 [P] Initialize Go module in outlook-md/go.mod with Go 1.21+
+- [X] T004 [P] Create Makefile at repository root with build, test, clean, install targets
+- [X] T005 [P] Create .gitignore with bin/, ~/.outlook-md/token-cache, *.log entries
+- [X] T006 [P] Create test directories: tests/{go/{auth,calendar,output},lua/}
+- [X] T007 [P] Create contracts directory: specs/001-outlook-md-sync/contracts/ (already exists)
+- [X] T008 [P] Create testdata directory for test fixtures: tests/go/testdata/
 
 ---
 
@@ -43,13 +43,13 @@ Per plan.md project structure:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T009 Define JSON schema types in outlook-md/pkg/schema/v1.go (CLIOutput, CalendarEvent, Organizer, Attendee)
-- [ ] T010 [P] Implement configuration loading in outlook-md/internal/config/config.go (Keychain lookup, env var fallback)
-- [ ] T011 [P] Create GraphClient interface in outlook-md/internal/calendar/client.go (for mockability per research.md)
-- [ ] T012 [P] Create test fixtures in tests/go/testdata/: calendar_response_{empty,single,many,allday}.json
-- [ ] T013 [P] Implement schema validation helper in tests/go/schema_test.go for JSON contract tests
+- [X] T009 Define JSON schema types in outlook-md/pkg/schema/v1.go (CLIOutput, CalendarEvent, Organizer, Attendee)
+- [X] T010 [P] Implement configuration loading in outlook-md/internal/config/config.go (Keychain lookup, env var fallback)
+- [X] T011 [P] Create GraphClient interface in outlook-md/internal/calendar/client.go (for mockability per research.md)
+- [X] T012 [P] Create test fixtures in tests/go/testdata/: calendar_response_{empty,single,many,allday}.json
+- [X] T013 [P] Implement schema validation helper in tests/go/schema_test.go for JSON contract tests
 
-**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
+**Checkpoint**: ✅ Foundation ready - user story implementation can now begin in parallel
 
 ---
 
@@ -63,29 +63,29 @@ Per plan.md project structure:
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T014 [P] [US1] Unit test for JSON output formatting in tests/go/output/formatter_test.go
-- [ ] T015 [P] [US1] Unit test for markdown parser in tests/lua/parser_spec.lua (extract managed region)
-- [ ] T016 [P] [US1] Unit test for event renderer in tests/lua/renderer_spec.lua (basic event formatting)
-- [ ] T017 [P] [US1] Integration test with mocked Graph API in tests/go/calendar/client_test.go
+- [X] T014 [P] [US1] Unit test for JSON output formatting in tests/go/output/formatter_test.go
+- [X] T015 [P] [US1] Unit test for markdown parser in tests/lua/parser_spec.lua (extract managed region)
+- [X] T016 [P] [US1] Unit test for event renderer in tests/lua/renderer_spec.lua (basic event formatting)
+- [X] T017 [P] [US1] Integration test with mocked Graph API in tests/go/calendar/client_test.go
 
 ### Implementation for User Story 1 - CLI Component
 
-- [ ] T018 [P] [US1] Implement CLI entry point in outlook-md/cmd/outlook-md/main.go (command routing, flag parsing)
-- [ ] T019 [P] [US1] Implement "today" command handler in outlook-md/cmd/outlook-md/main.go (calculate 00:00-24:00 window)
-- [ ] T020 [US1] Implement GraphClient HTTP implementation in outlook-md/internal/calendar/client.go (HTTP calls to /me/calendarView)
-- [ ] T021 [US1] Implement event fetching in outlook-md/internal/calendar/events.go (parse Graph API response to CalendarEvent)
-- [ ] T022 [US1] Implement JSON formatter in outlook-md/internal/output/formatter.go (serialize CLIOutput to stdout)
-- [ ] T023 [US1] Add error handling: write errors to stderr, return non-zero exit codes per FR-009/FR-010
+- [X] T018 [P] [US1] Implement CLI entry point in outlook-md/cmd/outlook-md/main.go (command routing, flag parsing)
+- [X] T019 [P] [US1] Implement "today" command handler in outlook-md/cmd/outlook-md/main.go (calculate 00:00-24:00 window)
+- [X] T020 [US1] Implement GraphClient HTTP implementation in outlook-md/internal/calendar/client.go (HTTP calls to /me/calendarView)
+- [X] T021 [US1] Implement event fetching in outlook-md/internal/calendar/events.go (parse Graph API response to CalendarEvent)
+- [X] T022 [US1] Implement JSON formatter in outlook-md/internal/output/formatter.go (serialize CLIOutput to stdout)
+- [X] T023 [US1] Add error handling: write errors to stderr, return non-zero exit codes per FR-009/FR-010
 
 ### Implementation for User Story 1 - Plugin Component
 
-- [ ] T024 [P] [US1] Implement plugin initialization in lua/obsidian_outlook_sync/init.lua (setup function, command registration)
-- [ ] T025 [P] [US1] Implement buffer parser in lua/obsidian_outlook_sync/parser.lua (find AGENDA_START/END markers)
-- [ ] T026 [US1] Implement CLI invocation in lua/obsidian_outlook_sync/cli.lua (subprocess call, capture stdout/stderr)
-- [ ] T027 [US1] Implement basic event renderer in lua/obsidian_outlook_sync/renderer.lua (format events as markdown headers)
-- [ ] T028 [US1] Implement atomic buffer replacement in lua/obsidian_outlook_sync/parser.lua (nvim_buf_set_lines)
-- [ ] T029 [US1] Implement :OutlookAgendaToday command handler (orchestrate: parse → CLI call → render → replace)
-- [ ] T030 [US1] Add error handling: display CLI stderr if non-zero exit code per FR-029
+- [X] T024 [P] [US1] Implement plugin initialization in lua/obsidian_outlook_sync/init.lua (setup function, command registration)
+- [X] T025 [P] [US1] Implement buffer parser in lua/obsidian_outlook_sync/parser.lua (find AGENDA_START/END markers)
+- [X] T026 [US1] Implement CLI invocation in lua/obsidian_outlook_sync/cli.lua (subprocess call, capture stdout/stderr)
+- [X] T027 [US1] Implement basic event renderer in lua/obsidian_outlook_sync/renderer.lua (format events as markdown headers)
+- [X] T028 [US1] Implement atomic buffer replacement in lua/obsidian_outlook_sync/parser.lua (nvim_buf_set_lines)
+- [X] T029 [US1] Implement :OutlookAgendaToday command handler (orchestrate: parse → CLI call → render → replace)
+- [X] T030 [US1] Add error handling: display CLI stderr if non-zero exit code per FR-029
 
 **Checkpoint**: At this point, basic calendar sync should work end-to-end (fetch events, display in note)
 

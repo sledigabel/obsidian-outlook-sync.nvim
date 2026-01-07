@@ -1,0 +1,27 @@
+{
+  "value": [
+    {
+      "id": "AAMkAGI2ALLDAY=",
+      "subject": "Company Holiday - New Year",
+      "isAllDay": true,
+      "start": {
+        "dateTime": "2026-01-01T00:00:00",
+        "timeZone": "America/New_York"
+      },
+      "end": {
+        "dateTime": "2026-01-02T00:00:00",
+        "timeZone": "America/New_York"
+      },
+      "location": {
+        "displayName": ""
+      },
+      "organizer": {
+        "emailAddress": {
+          "name": "HR Department",
+          "address": "hr@example.com"
+        }
+      },
+      "attendees": []
+    }
+  ]
+}

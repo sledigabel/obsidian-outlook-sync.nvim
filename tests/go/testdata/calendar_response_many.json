@@ -1,0 +1,79 @@
+{
+  "value": [
+    {
+      "id": "AAMkAGI2EVENT001=",
+      "subject": "Morning Standup",
+      "isAllDay": false,
+      "start": {
+        "dateTime": "2026-01-07T09:00:00",
+        "timeZone": "America/New_York"
+      },
+      "end": {
+        "dateTime": "2026-01-07T09:15:00",
+        "timeZone": "America/New_York"
+      },
+      "location": {
+        "displayName": "Room 101"
+      },
+      "organizer": {
+        "emailAddress": {
+          "name": "Alice Smith",
+          "address": "alice@example.com"
+        }
+      },
+      "attendees": []
+    },
+    {
+      "id": "AAMkAGI2EVENT002=",
+      "subject": "Product Review",
+      "isAllDay": false,
+      "start": {
+        "dateTime": "2026-01-07T14:00:00",
+        "timeZone": "America/New_York"
+      },
+      "end": {
+        "dateTime": "2026-01-07T15:00:00",
+        "timeZone": "America/New_York"
+      },
+      "location": {
+        "displayName": ""
+      },
+      "organizer": {
+        "emailAddress": {
+          "name": "David Lee",
+          "address": "david@example.com"
+        }
+      },
+      "attendees": [
+        {
+          "emailAddress": {
+            "name": "Alice Smith",
+            "address": "alice@example.com"
+          },
+          "type": "required"
+        },
+        {
+          "emailAddress": {
+            "name": "Bob Jones",
+            "address": "bob@example.com"
+          },
+          "type": "required"
+        },
+        {
+          "emailAddress": {
+            "name": "Carol White",
+            "address": "carol@example.com"
+          },
+          "type": "optional"
+        },
+        {
+          "emailAddress": {
+            "name": "Eve Anderson",
+            "address": "eve@example.com"
+          },
+          "type": "optional"
+        }
+      ]
+    }
+  ]
+}

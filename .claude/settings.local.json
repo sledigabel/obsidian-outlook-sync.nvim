@@ -6,7 +6,18 @@
       "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
       "Bash(.specify/scripts/bash/setup-plan.sh:*)",
       "Bash(.specify/scripts/bash/update-agent-context.sh:*)",
-      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)"
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(go mod init:*)",
+      "Bash(cat:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(source:*)",
+      "Bash(/Users/sebastienledigabel/dev/perso/obsidian-outlook-sync.nvim/bin/outlook-md:*)",
+      "Bash(make build:*)",
+      "Bash(./bin/outlook-md:*)",
+      "Bash(git add:*)"
     ]
   }
 }

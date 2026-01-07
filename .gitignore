@@ -1,0 +1,43 @@
+# Build artifacts
+bin/
+*.exe
+*.test
+*.out
+
+# Go artifacts
+vendor/
+go.sum
+
+# Token cache (user home directory, but exclude if accidentally committed)
+token-cache
+.outlook-md/
+
+# Logs
+*.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*
+
+# Test coverage
+coverage/
+*.coverprofile
+
+# Temporary files
+*.tmp
+tmp/
+
+# Neovim plugin test artifacts
+.tests/

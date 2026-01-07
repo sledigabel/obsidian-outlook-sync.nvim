@@ -1,0 +1,42 @@
+{
+  "value": [
+    {
+      "id": "AAMkAGI2THVSAAA=",
+      "subject": "Team Standup",
+      "isAllDay": false,
+      "start": {
+        "dateTime": "2026-01-07T09:00:00",
+        "timeZone": "America/New_York"
+      },
+      "end": {
+        "dateTime": "2026-01-07T09:30:00",
+        "timeZone": "America/New_York"
+      },
+      "location": {
+        "displayName": "Conference Room A"
+      },
+      "organizer": {
+        "emailAddress": {
+          "name": "Alice Smith",
+          "address": "alice@example.com"
+        }
+      },
+      "attendees": [
+        {
+          "emailAddress": {
+            "name": "Bob Jones",
+            "address": "bob@example.com"
+          },
+          "type": "required"
+        },
+        {
+          "emailAddress": {
+            "name": "Carol White",
+            "address": "carol@example.com"
+          },
+          "type": "optional"
+        }
+      ]
+    }
+  ]
+}
