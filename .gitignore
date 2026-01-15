@@ -41,3 +41,6 @@ tmp/
 
 # Neovim plugin test artifacts
 .tests/
+
+# env tests
+test.env
