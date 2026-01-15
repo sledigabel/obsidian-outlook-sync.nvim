@@ -53,9 +53,17 @@ function M.setup(opts)
 		desc = 'Sync today\'s Outlook calendar events into managed region'
 	})
 
-	-- TODO: Add more commands in future phases (US3-US6)
-	-- vim.api.nvim_create_user_command('OutlookAgendaTomorrow', ...)
-	-- vim.api.nvim_create_user_command('OutlookAgendaWeek', ...)
+	vim.api.nvim_create_user_command('OutlookAgendaTomorrow', function()
+		require('obsidian_outlook_sync.commands').agenda_tomorrow()
+	end, {
+		desc = 'Sync tomorrow\'s Outlook calendar events into managed region'
+	})
+
+	vim.api.nvim_create_user_command('OutlookAgendaWeek', function()
+		require('obsidian_outlook_sync.commands').agenda_week()
+	end, {
+		desc = 'Sync this week\'s Outlook calendar events into managed region'
+	})
 end
 
 return M

@@ -8,8 +8,8 @@ local renderer = require('obsidian_outlook_sync.renderer')
 
 local M = {}
 
--- agenda_today fetches and displays today's calendar events
-function M.agenda_today()
+-- fetch_and_sync is a generic function to fetch and sync calendar events
+local function fetch_and_sync(command, description)
 	-- Get plugin config
 	local config = require('obsidian_outlook_sync').config
 
@@ -24,12 +24,12 @@ function M.agenda_today()
 		return
 	end
 
-	-- Parse existing events from managed region (Phase 4)
+	-- Parse existing events from managed region
 	local old_events = parser.parse_managed_region_events(lines, start_line, end_line)
 
 	-- Invoke CLI
-	vim.notify('Fetching calendar events...', vim.log.levels.INFO)
-	local cli_output, err = cli.invoke_cli('today', {
+	vim.notify('Fetching ' .. description .. ' calendar events...', vim.log.levels.INFO)
+	local cli_output, err = cli.invoke_cli(command, {
 		cli_path = config.cli_path,
 		timezone = config.timezone,
 		format = 'json',
@@ -40,7 +40,7 @@ function M.agenda_today()
 		return
 	end
 
-	-- Merge old and new events, preserving notes (Phase 4)
+	-- Merge old and new events, preserving notes
 	local merged_events = merger.merge_events(old_events, cli_output.events)
 
 	-- Render events to markdown
@@ -68,6 +68,21 @@ function M.agenda_today()
 	else
 		vim.notify('Failed to update buffer', vim.log.levels.ERROR)
 	end
+end
+
+-- agenda_today fetches and displays today's calendar events
+function M.agenda_today()
+	fetch_and_sync('today', "today's")
+end
+
+-- agenda_tomorrow fetches and displays tomorrow's calendar events
+function M.agenda_tomorrow()
+	fetch_and_sync('tomorrow', "tomorrow's")
+end
+
+-- agenda_week fetches and displays this week's calendar events
+function M.agenda_week()
+	fetch_and_sync('week', "this week's")
 end
 
 return M
