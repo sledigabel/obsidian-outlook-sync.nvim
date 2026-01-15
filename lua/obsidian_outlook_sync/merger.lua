@@ -27,6 +27,21 @@ function M.is_meaningful_notes(notes)
 	return false
 end
 
+-- should_include_event determines if an event should be included in the output
+-- @param event table: event to check
+-- @return boolean: true if event should be included
+local function should_include_event(event)
+	-- Always include deleted events with meaningful notes
+	if event.deleted and M.is_meaningful_notes(event.notes) then
+		return true
+	end
+
+	-- Include all events now - user can decide what they want to see
+	-- Previous filter removed single-person meetings, but this was too aggressive
+	-- and removed legitimate overlapping personal events
+	return true
+end
+
 -- merge_events merges old and new event lists, preserving notes
 -- @param old_events table: array of events from previous buffer state
 -- @param new_events table: array of events from CLI output
@@ -60,7 +75,10 @@ function M.merge_events(old_events, new_events)
 			new_event.notes = old_event.notes
 		end
 
-		table.insert(merged, new_event)
+		-- Only include if it passes the filter
+		if should_include_event(new_event) then
+			table.insert(merged, new_event)
+		end
 	end
 
 	-- Process deleted events (in old but not in new)
@@ -72,7 +90,10 @@ function M.merge_events(old_events, new_events)
 			if M.is_meaningful_notes(old_event.notes) then
 				-- Retain with [deleted] marker (FR-023)
 				old_event.deleted = true
-				table.insert(merged, old_event)
+				-- Only include if it passes the filter
+				if should_include_event(old_event) then
+					table.insert(merged, old_event)
+				end
 			end
 			-- Otherwise remove entirely (FR-024)
 		end

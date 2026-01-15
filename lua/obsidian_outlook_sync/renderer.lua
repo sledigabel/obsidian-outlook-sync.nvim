@@ -32,48 +32,58 @@ function M.render_event(event)
 
 	table.insert(lines, header)
 
-	-- Add location if present
-	if event.location and event.location ~= '' then
-		table.insert(lines, string.format('**Location:** %s', event.location))
+	-- Add Agenda section only if body content exists
+	if event.body and event.body ~= '' then
+		table.insert(lines, '')
+		table.insert(lines, '### Agenda')
+		table.insert(lines, '- <auto> ' .. event.body)
 	end
 
-	-- Add Agenda section (FR-034)
+	-- Add combined Attendees section (organizer + invitees in single line)
 	table.insert(lines, '')
-	table.insert(lines, '### Agenda')
-	table.insert(lines, '- <auto> (Add agenda items here)')
+	table.insert(lines, '### Attendees')
 
-	-- Add Organizer section (FR-036)
-	table.insert(lines, '')
-	table.insert(lines, '### Organizer')
+	local attendee_names = {}
+
+	-- Start with organizer marked as (O)
 	if event.organizer then
 		local org_display = event.organizer.name ~= '' and event.organizer.name or event.organizer.email
 		if org_display ~= '' then
-			table.insert(lines, string.format('- <auto> %s <%s>', event.organizer.name, event.organizer.email))
+			table.insert(attendee_names, org_display .. ' (O)')
 		end
 	end
 
-	-- Add Invitees section (FR-037, FR-038)
-	table.insert(lines, '')
-	table.insert(lines, '### Invitees')
+	-- Add invitees (up to 5), filtering out locations
 	if event.attendees and #event.attendees > 0 then
-		local max_display = 15
-		local num_to_display = math.min(#event.attendees, max_display)
+		local max_display = 5
+		local displayed = 0
+		local total_filtered = 0
 
-		-- Display first 15 attendees
-		for i = 1, num_to_display do
-			local attendee = event.attendees[i]
-			table.insert(lines, string.format('- <auto> %s <%s> (%s)',
-				attendee.name, attendee.email, attendee.type))
+		for _, attendee in ipairs(event.attendees) do
+			local name_display = attendee.name ~= '' and attendee.name or attendee.email
+
+			-- Filter out locations (names starting with 3+ capital letters like "NYC", "LON")
+			local is_location = name_display:match('^[A-Z][A-Z][A-Z]')
+
+			if not is_location then
+				total_filtered = total_filtered + 1
+				if displayed < max_display then
+					table.insert(attendee_names, name_display)
+					displayed = displayed + 1
+				end
+			end
 		end
 
-		-- Add truncation summary if more than 15
-		if #event.attendees > max_display then
-			local remaining = #event.attendees - max_display
-			table.insert(lines, string.format('- <auto> …and %d more (total %d)',
-				remaining, #event.attendees))
+		-- Add truncation summary if more than 5 (after filtering)
+		if total_filtered > max_display then
+			local remaining = total_filtered - max_display
+			table.insert(attendee_names, string.format('…and %d more', remaining))
 		end
-	else
-		table.insert(lines, '- <auto> None')
+	end
+
+	-- Output as single line
+	if #attendee_names > 0 then
+		table.insert(lines, table.concat(attendee_names, ', '))
 	end
 
 	-- Add notes pocket (preserved from old or scaffold for new)

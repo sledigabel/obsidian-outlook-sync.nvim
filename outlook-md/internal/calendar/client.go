@@ -51,6 +51,8 @@ func NewGraphClientWithBaseURL(accessToken, baseURL string) GraphClient {
 
 // GetCalendarView implements the GraphClient interface
 func (c *graphClientImpl) GetCalendarView(ctx context.Context, start, end time.Time, timezone string) ([]schema.CalendarEvent, error) {
+	var allEvents []graphEvent
+
 	// Build URL with query parameters
 	endpoint := fmt.Sprintf("%s/me/calendarView", c.baseURL)
 	u, err := url.Parse(endpoint)
@@ -62,41 +64,56 @@ func (c *graphClientImpl) GetCalendarView(ctx context.Context, start, end time.T
 	q := u.Query()
 	q.Set("startDateTime", start.Format(time.RFC3339))
 	q.Set("endDateTime", end.Format(time.RFC3339))
+	// Include all events regardless of response status
+	q.Set("$top", "999")  // Increase page size to reduce pagination
 	u.RawQuery = q.Encode()
 
-	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
+	nextURL := u.String()
 
-	// Set headers
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
-	req.Header.Set("Prefer", fmt.Sprintf("outlook.timezone=\"%s\"", timezone))
-	req.Header.Set("Content-Type", "application/json")
+	// Handle pagination - fetch all pages
+	for nextURL != "" {
+		// Create HTTP request
+		req, err := http.NewRequestWithContext(ctx, "GET", nextURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
 
-	// Execute request
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
-	}
-	defer resp.Body.Close()
+		// Set headers
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
+		req.Header.Set("Prefer", fmt.Sprintf("outlook.timezone=\"%s\"", timezone))
+		req.Header.Set("Content-Type", "application/json")
 
-	// Check status code
-	if resp.StatusCode != http.StatusOK {
-		// Read error response body
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Graph API returned status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
+		// Execute request
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("HTTP request failed: %w", err)
+		}
 
-	// Parse response
-	var graphResp graphCalendarResponse
-	if err := json.NewDecoder(resp.Body).Decode(&graphResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		// Check status code
+		if resp.StatusCode != http.StatusOK {
+			// Read error response body
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return nil, fmt.Errorf("Graph API returned status %d: %s", resp.StatusCode, string(bodyBytes))
+		}
+
+		// Parse response
+		var graphResp graphCalendarResponse
+		if err := json.NewDecoder(resp.Body).Decode(&graphResp); err != nil {
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode response: %w", err)
+		}
+		resp.Body.Close()
+
+		// Append events from this page
+		allEvents = append(allEvents, graphResp.Value...)
+
+		// Check for next page
+		nextURL = graphResp.NextLink
 	}
 
 	// Convert Graph API events to schema.CalendarEvent
-	events, err := parseCalendarEvents(graphResp.Value, timezone)
+	events, err := parseCalendarEvents(allEvents, timezone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse events: %w", err)
 	}
@@ -106,7 +123,8 @@ func (c *graphClientImpl) GetCalendarView(ctx context.Context, start, end time.T
 
 // graphCalendarResponse represents the Microsoft Graph API response
 type graphCalendarResponse struct {
-	Value []graphEvent `json:"value"`
+	Value    []graphEvent `json:"value"`
+	NextLink string       `json:"@odata.nextLink"`
 }
 
 // graphEvent represents a calendar event from Microsoft Graph API
@@ -138,6 +156,9 @@ type graphEvent struct {
 		} `json:"emailAddress"`
 		Type string `json:"type"` // "required", "optional", or "resource"
 	} `json:"attendees"`
+	ResponseStatus struct {
+		Response string `json:"response"` // "none", "organizer", "tentativelyAccepted", "accepted", "declined", "notResponded"
+	} `json:"responseStatus"`
 }
 
 // parseCalendarEvents converts Graph API events to our schema
@@ -151,6 +172,12 @@ func parseCalendarEvents(graphEvents []graphEvent, timezone string) ([]schema.Ca
 	}
 
 	for _, ge := range graphEvents {
+		// Filter: Only include accepted events or events where user is the organizer
+		response := ge.ResponseStatus.Response
+		if response != "accepted" && response != "organizer" {
+			continue
+		}
+
 		// Parse start/end times
 		start, err := parseDateTime(ge.Start.DateTime, loc)
 		if err != nil {
@@ -193,9 +220,14 @@ func parseCalendarEvents(graphEvents []graphEvent, timezone string) ([]schema.Ca
 		events = append(events, event)
 	}
 
-	// Sort events chronologically
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Start.Before(events[j].Start)
+	// Sort events chronologically with stable sort for same-time events
+	sort.SliceStable(events, func(i, j int) bool {
+		// Primary sort: by start time
+		if !events[i].Start.Equal(events[j].Start) {
+			return events[i].Start.Before(events[j].Start)
+		}
+		// Secondary sort: by ID for deterministic ordering of overlapping events
+		return events[i].ID < events[j].ID
 	})
 
 	return events, nil
