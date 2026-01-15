@@ -45,6 +45,9 @@ function M.render_event(event)
 
 	local attendee_names = {}
 
+	-- Get organizer email for deduplication
+	local org_email = event.organizer and event.organizer.email or ''
+
 	-- Start with organizer marked as (O)
 	if event.organizer then
 		local org_display = event.organizer.name ~= '' and event.organizer.name or event.organizer.email
@@ -53,7 +56,7 @@ function M.render_event(event)
 		end
 	end
 
-	-- Add invitees (up to 5), filtering out locations
+	-- Add invitees (up to 5), filtering out locations and organizer
 	if event.attendees and #event.attendees > 0 then
 		local max_display = 5
 		local displayed = 0
@@ -65,7 +68,10 @@ function M.render_event(event)
 			-- Filter out locations (names starting with 3+ capital letters like "NYC", "LON")
 			local is_location = name_display:match('^[A-Z][A-Z][A-Z]')
 
-			if not is_location then
+			-- Filter out organizer (deduplicate by email)
+			local is_organizer = attendee.email == org_email
+
+			if not is_location and not is_organizer then
 				total_filtered = total_filtered + 1
 				if displayed < max_display then
 					table.insert(attendee_names, name_display)
