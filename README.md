@@ -297,31 +297,28 @@ Add the managed region markers to your markdown file:
 
 ### Syncing Calendar Events
 
-1. Open your daily note in Neovim
-2. Run the command:
+#### Available Commands
 
 ```vim
-:OutlookAgendaToday
+:OutlookAgendaToday     " Sync today's calendar events (00:00-24:00)
+:OutlookAgendaTomorrow  " Sync tomorrow's calendar events (00:00-24:00)
+:OutlookAgendaWeek      " Sync this week's calendar events (Monday-Sunday)
 ```
 
-The content between the markers will be replaced with today's calendar events:
+#### Example Usage
+
+1. Open your daily note in Neovim
+2. Run one of the commands above
+
+The content between the markers will be replaced with calendar events:
 
 ```markdown
 <!-- AGENDA_START -->
 <!-- EVENT_ID: event-abc-123 -->
 ## 09:00-09:30 Team Standup
-**Location:** Conference Room A
 
-### Agenda
-- <auto> (Add agenda items here)
-
-### Organizer
-- <auto> Alice Smith <alice@example.com>
-
-### Invitees
-- <auto> Bob Jones <bob@example.com> (required)
-- <auto> Carol White <carol@example.com> (required)
-- <auto> Diana Lee <diana@example.com> (optional)
+### Attendees
+Alice Smith (O), Bob Jones, Carol White
 
 ### Notes
 <!-- NOTES_START -->
@@ -331,18 +328,9 @@ The content between the markers will be replaced with today's calendar events:
 
 <!-- EVENT_ID: event-def-456 -->
 ## 14:00-15:00 Project Review
-**Location:** Zoom
 
-### Agenda
-- <auto> (Add agenda items here)
-
-### Organizer
-- <auto> Project Manager <pm@example.com>
-
-### Invitees
-- <auto> Dev Team <dev@example.com> (required)
-- <auto> QA Team <qa@example.com> (required)
-…and 12 more (total 14)
+### Attendees
+Project Manager (O), Dev Team, QA Team, ...and 12 more
 
 ### Notes
 <!-- NOTES_START -->
@@ -352,14 +340,8 @@ The content between the markers will be replaced with today's calendar events:
 <!-- EVENT_ID: event-ghi-789 -->
 ## All Day - Company Holiday
 
-### Agenda
-- <auto> (Add agenda items here)
-
-### Organizer
-- <auto> HR Department <hr@example.com>
-
-### Invitees
-- <auto> None
+### Attendees
+HR Department (O)
 
 ### Notes
 <!-- NOTES_START -->
@@ -372,7 +354,8 @@ The content between the markers will be replaced with today's calendar events:
 - **EVENT_ID markers**: Used to track events across refreshes
 - **Your notes are preserved**: Content in `<!-- NOTES_START/END -->` is kept when you refresh
 - **Deleted events retained**: If you've added notes to an event that's later deleted, it's kept with `[deleted]` marker
-- **Attendee truncation**: For meetings with 16+ attendees, shows first 15 plus "…and N more"
+- **Attendee display**: Organizer marked with (O), up to 5 attendees shown, then "…and N more"
+- **Accepted meetings only**: Only shows meetings you've accepted or organized
 - **Auto-generated content**: Lines starting with `- <auto>` are managed by the plugin
 
 ### Plugin Configuration Options
@@ -428,7 +411,9 @@ outlook-md today --format json --tz Local > calendar.json
 outlook-md <command> [options]
 
 Commands:
-  today    Fetch today's calendar events (00:00-24:00)
+  today      Fetch today's calendar events (00:00-24:00)
+  tomorrow   Fetch tomorrow's calendar events (00:00-24:00)
+  week       Fetch this week's calendar events (Monday-Sunday)
 
 Options:
   --format <format>   Output format (default: json)
@@ -438,7 +423,8 @@ Options:
 
 Examples:
   outlook-md today --format json --tz America/New_York
-  outlook-md today --tz UTC
+  outlook-md tomorrow --tz UTC
+  outlook-md week --tz Europe/London
 ```
 
 ## Troubleshooting
