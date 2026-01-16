@@ -21,7 +21,10 @@
           "address": "hr@example.com"
         }
       },
-      "attendees": []
+      "attendees": [],
+      "responseStatus": {
+        "response": "accepted"
+      }
     }
   ]
 }

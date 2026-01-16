@@ -21,7 +21,10 @@
           "address": "alice@example.com"
         }
       },
-      "attendees": []
+      "attendees": [],
+      "responseStatus": {
+        "response": "organizer"
+      }
     },
     {
       "id": "AAMkAGI2EVENT002=",
@@ -73,7 +76,10 @@
           },
           "type": "optional"
         }
-      ]
+      ],
+      "responseStatus": {
+        "response": "accepted"
+      }
     }
   ]
 }

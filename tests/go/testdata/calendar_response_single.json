@@ -36,7 +36,10 @@
           },
           "type": "optional"
         }
-      ]
+      ],
+      "responseStatus": {
+        "response": "accepted"
+      }
     }
   ]
 }

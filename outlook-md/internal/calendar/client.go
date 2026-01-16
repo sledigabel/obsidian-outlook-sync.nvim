@@ -178,6 +178,12 @@ func parseCalendarEvents(graphEvents []graphEvent, timezone string) ([]schema.Ca
 			continue
 		}
 
+		// Filter: Skip events where user is organizer but there are no invitees
+		// (solo meetings with no attendees)
+		if response == "organizer" && len(ge.Attendees) == 0 {
+			continue
+		}
+
 		// Parse start/end times
 		start, err := parseDateTime(ge.Start.DateTime, loc)
 		if err != nil {

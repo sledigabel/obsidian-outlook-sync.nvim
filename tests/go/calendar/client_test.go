@@ -150,8 +150,9 @@ func TestGetCalendarView_ManyEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCalendarView failed: %v", err)
 	}
-	if len(events) != 2 {
-		t.Errorf("Expected 2 events, got %d", len(events))
+	// Expecting 1 event because the first event has no attendees and user is organizer (filtered out)
+	if len(events) != 1 {
+		t.Errorf("Expected 1 event, got %d", len(events))
 	}
 
 	// Verify events are in chronological order
@@ -198,6 +199,65 @@ func TestGetCalendarView_AllDayEvent(t *testing.T) {
 	}
 	if len(event.Attendees) != 0 {
 		t.Errorf("Expected 0 attendees for all-day event, got %d", len(event.Attendees))
+	}
+}
+
+// TestGetCalendarView_FilterOrganizerNoAttendees tests that events where the user
+// is the organizer with no attendees are filtered out
+func TestGetCalendarView_FilterOrganizerNoAttendees(t *testing.T) {
+	// Create a response with one event where user is organizer with no attendees
+	mockResponse := []byte(`{
+		"value": [
+			{
+				"id": "SOLO-EVENT-001",
+				"subject": "Personal Task",
+				"isAllDay": false,
+				"start": {
+					"dateTime": "2026-01-07T10:00:00",
+					"timeZone": "UTC"
+				},
+				"end": {
+					"dateTime": "2026-01-07T11:00:00",
+					"timeZone": "UTC"
+				},
+				"location": {
+					"displayName": ""
+				},
+				"organizer": {
+					"emailAddress": {
+						"name": "Me",
+						"address": "me@example.com"
+					}
+				},
+				"attendees": [],
+				"responseStatus": {
+					"response": "organizer"
+				}
+			}
+		]
+	}`)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(mockResponse)
+	}))
+	defer server.Close()
+
+	client := calendar.NewGraphClientWithBaseURL("test-token", server.URL)
+
+	ctx := context.Background()
+	start := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+
+	events, err := client.GetCalendarView(ctx, start, end, "UTC")
+
+	// Verify results - should filter out the solo organizer event
+	if err != nil {
+		t.Fatalf("GetCalendarView failed: %v", err)
+	}
+	if len(events) != 0 {
+		t.Errorf("Expected 0 events (solo organizer events should be filtered), got %d", len(events))
 	}
 }
 
