@@ -14,7 +14,7 @@ GOCLEAN := $(GOCMD) clean
 GOMOD := $(GOCMD) mod
 
 # Build the CLI binary
-build:
+build: deps
 	@echo "Building $(CLI_NAME)..."
 	@mkdir -p $(BIN_DIR)
 	cd outlook-md && $(GOBUILD) -o ../$(CLI_PATH) ./cmd/outlook-md
