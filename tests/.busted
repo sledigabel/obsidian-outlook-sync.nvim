@@ -1,0 +1,10 @@
+return {
+  _all = {
+    lua = 'lua',
+  },
+  default = {
+    lpath = '../lua/?.lua;../lua/?/init.lua',
+    ROOT = {'./lua'},
+    verbose = true,
+  }
+}

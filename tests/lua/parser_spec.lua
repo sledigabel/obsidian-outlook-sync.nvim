@@ -160,4 +160,118 @@ describe('parser', function()
       assert.is_nil(events[3].notes)
     end)
   end)
+
+  describe('parse_event_times', function()
+    it('should parse times from timed event header', function()
+      local lines = {
+        '<!-- EVENT_ID: event-123 -->',
+        '## 09:00-10:30 Team Meeting',
+        '### Attendees',
+      }
+
+      local times = parser.parse_event_times(lines, 1, 3)
+      assert.is_not_nil(times)
+      assert.equals(9, times.start_hour)
+      assert.equals(0, times.start_min)
+      assert.equals(10, times.end_hour)
+      assert.equals(30, times.end_min)
+    end)
+
+    it('should parse times with afternoon hours', function()
+      local lines = {
+        '<!-- EVENT_ID: event-456 -->',
+        '## 14:30-16:00 Project Review',
+      }
+
+      local times = parser.parse_event_times(lines, 1, 2)
+      assert.is_not_nil(times)
+      assert.equals(14, times.start_hour)
+      assert.equals(30, times.start_min)
+      assert.equals(16, times.end_hour)
+      assert.equals(0, times.end_min)
+    end)
+
+    it('should return nil for all-day events', function()
+      local lines = {
+        '<!-- EVENT_ID: event-allday -->',
+        '## All Day - Company Holiday',
+      }
+
+      local times = parser.parse_event_times(lines, 1, 2)
+      assert.is_nil(times)
+    end)
+
+    it('should return nil when no header with times exists', function()
+      local lines = {
+        '<!-- EVENT_ID: event-789 -->',
+        '### Attendees',
+        'Alice Smith',
+      }
+
+      local times = parser.parse_event_times(lines, 1, 3)
+      assert.is_nil(times)
+    end)
+
+    it('should parse times from header with [deleted] marker', function()
+      local lines = {
+        '<!-- EVENT_ID: event-deleted -->',
+        '## 11:00-12:00 Cancelled Meeting [deleted]',
+      }
+
+      local times = parser.parse_event_times(lines, 1, 2)
+      assert.is_not_nil(times)
+      assert.equals(11, times.start_hour)
+      assert.equals(0, times.start_min)
+      assert.equals(12, times.end_hour)
+      assert.equals(0, times.end_min)
+    end)
+  end)
+
+  describe('find_notes_line', function()
+    it('should find NOTES_START marker line', function()
+      local lines = {
+        '<!-- EVENT_ID: event-123 -->',
+        '## 09:00-10:00 Team Meeting',
+        '### Attendees',
+        'Alice, Bob',
+        '### Notes',
+        '<!-- NOTES_START -->',
+        'My notes here',
+        '<!-- NOTES_END -->',
+      }
+
+      local notes_line = parser.find_notes_line(lines, 1, 8)
+      assert.equals(6, notes_line)
+    end)
+
+    it('should return nil when no NOTES_START marker exists', function()
+      local lines = {
+        '<!-- EVENT_ID: event-456 -->',
+        '## 14:00-15:00 Quick Sync',
+        '### Attendees',
+      }
+
+      local notes_line = parser.find_notes_line(lines, 1, 3)
+      assert.is_nil(notes_line)
+    end)
+
+    it('should find notes marker in longer event block', function()
+      local lines = {
+        '<!-- EVENT_ID: event-789 -->',
+        '## 16:00-17:00 Long Meeting',
+        '### Agenda',
+        '- <auto> Discuss Q4 goals',
+        '### Attendees',
+        'Alice, Bob, Carol',
+        '### Notes',
+        '<!-- NOTES_START -->',
+        '- Action item 1',
+        '- Action item 2',
+        '<!-- NOTES_END -->',
+      }
+
+      local notes_line = parser.find_notes_line(lines, 1, 11)
+      assert.equals(8, notes_line)
+    end)
+  end)
 end)

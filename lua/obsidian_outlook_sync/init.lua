@@ -64,6 +64,12 @@ function M.setup(opts)
 	end, {
 		desc = 'Sync this week\'s Outlook calendar events into managed region'
 	})
+
+	vim.api.nvim_create_user_command('OutlookJumpToCurrentNotes', function()
+		require('obsidian_outlook_sync.commands').jump_to_current_notes()
+	end, {
+		desc = 'Jump to notes section of current or next meeting'
+	})
 end
 
 return M

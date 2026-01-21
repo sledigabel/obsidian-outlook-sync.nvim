@@ -158,4 +158,42 @@ function M.parse_managed_region_events(lines, start_line, end_line)
 	return events
 end
 
+-- parse_event_times extracts start and end times from event header
+-- @param lines table: array of all lines
+-- @param start_idx number: 1-indexed start of event block
+-- @param end_idx number: 1-indexed end of event block
+-- @return table|nil: {start_hour=number, start_min=number, end_hour=number, end_min=number} or nil for all-day/unparseable
+function M.parse_event_times(lines, start_idx, end_idx)
+	-- Look for header line with time format: ## HH:MM-HH:MM Subject
+	for i = start_idx, end_idx do
+		local line = lines[i]
+		-- Match pattern: ## HH:MM-HH:MM
+		local start_hour, start_min, end_hour, end_min = line:match('^## (%d%d):(%d%d)%-(%d%d):(%d%d)')
+		if start_hour then
+			return {
+				start_hour = tonumber(start_hour),
+				start_min = tonumber(start_min),
+				end_hour = tonumber(end_hour),
+				end_min = tonumber(end_min)
+			}
+		end
+	end
+	return nil
+end
+
+-- find_notes_line finds the line number of NOTES_START marker in an event
+-- @param lines table: array of all lines
+-- @param start_idx number: 1-indexed start of event block
+-- @param end_idx number: 1-indexed end of event block
+-- @return number|nil: 1-indexed line number of NOTES_START, or nil if not found
+function M.find_notes_line(lines, start_idx, end_idx)
+	for i = start_idx, end_idx do
+		local line = lines[i]
+		if line:find(M.NOTES_START, 1, true) then
+			return i
+		end
+	end
+	return nil
+end
+
 return M
