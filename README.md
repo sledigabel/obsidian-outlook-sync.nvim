@@ -4,9 +4,11 @@ Sync your Microsoft Outlook/M365 calendar events directly into your Obsidian dai
 
 ## Features
 
-### ✅ Currently Implemented (Phases 1-7)
+### ✅ Currently Implemented (Phases 1-8)
 
 - **Today's Calendar Sync**: Fetch and display today's calendar events (00:00-24:00) in your notes
+- **Extended Time Ranges**: Tomorrow and this week's calendar views
+- **Smart Navigation**: Jump to notes section of current or next meeting
 - **Managed Regions**: Automatically updates content between `<!-- AGENDA_START -->` and `<!-- AGENDA_END -->` markers
 - **Rich Event Details**: Shows event times, subjects, locations, organizers, attendees with deterministic sorting
 - **Notes Preservation**: Your personal notes are preserved when refreshing calendar events
@@ -22,7 +24,7 @@ Sync your Microsoft Outlook/M365 calendar events directly into your Obsidian dai
 
 ### 🚧 Coming Soon
 
-- **Extended Time Ranges**: Tomorrow, this week, custom date ranges (Phase 8)
+- **Smart Navigation**: Jump to notes section of current or next meeting with `OutlookJumpToCurrentNotes`
 - **Event Filtering**: Hide declined events, filter by calendar (Phase 9+)
 
 ## Architecture
@@ -299,11 +301,25 @@ Add the managed region markers to your markdown file:
 
 #### Available Commands
 
+##### Calendar Sync Commands
+
 ```vim
 :OutlookAgendaToday     " Sync today's calendar events (00:00-24:00)
 :OutlookAgendaTomorrow  " Sync tomorrow's calendar events (00:00-24:00)
 :OutlookAgendaWeek      " Sync this week's calendar events (Monday-Sunday)
 ```
+
+##### Navigation Commands
+
+```vim
+:OutlookJumpToCurrentNotes  " Jump to notes section of current or next meeting
+```
+
+**How it works:**
+- If a meeting is currently happening (start ≤ now < end), jumps to its notes section
+- If multiple meetings overlap, shows an interactive picker to select one
+- If no meeting is active, automatically jumps to the next upcoming meeting
+- If no meetings are found, displays an informational message
 
 #### Example Usage
 
@@ -357,6 +373,30 @@ HR Department (O)
 - **Attendee display**: Organizer marked with (O), up to 5 attendees shown, then "…and N more"
 - **Accepted meetings only**: Only shows meetings you've accepted or organized
 - **Auto-generated content**: Lines starting with `- <auto>` are managed by the plugin
+
+### Quick Navigation to Meeting Notes
+
+Use `:OutlookJumpToCurrentNotes` to quickly jump to the notes section of your current meeting:
+
+```vim
+:OutlookJumpToCurrentNotes
+```
+
+**Intelligent behavior:**
+1. **During a meeting** (10:30 AM, meeting is 10:00-11:00): Jumps directly to that meeting's notes
+2. **Multiple overlapping meetings**: Shows a picker to select which meeting
+3. **Between meetings**: Automatically jumps to the next upcoming meeting's notes
+4. **No meetings**: Shows "No current or upcoming meetings" message
+
+**Example workflow:**
+1. Run `:OutlookAgendaToday` to sync your calendar
+2. Throughout the day, use `:OutlookJumpToCurrentNotes` to quickly add notes to meetings
+3. The command intelligently positions your cursor in the right notes section based on the current time
+
+**Pro tip**: Map to a keybinding for even faster access:
+```lua
+vim.keymap.set('n', '<leader>oj', ':OutlookJumpToCurrentNotes<CR>', { desc = 'Jump to current meeting notes' })
+```
 
 ### Plugin Configuration Options
 
@@ -602,6 +642,7 @@ outlook-md today --format json 2>&1
 │   ├── commands.lua            # Command handlers
 │   ├── parser.lua              # Buffer parsing
 │   ├── cli.lua                 # CLI invocation
+│   ├── navigation.lua          # Meeting navigation & cursor positioning
 │   └── renderer.lua            # Markdown rendering
 ├── tests/                       # Test suites
 │   ├── go/                     # Go tests
@@ -702,16 +743,22 @@ make test
 - [x] Platform-specific build tags (darwin/other)
 - [x] Clear error messages for missing/denied credentials
 
-### Phase 8: User Story 6 - Custom Time Range Queries 🚧 Next
-- [ ] Tomorrow's events
-- [ ] This week's events
-- [ ] Custom date range queries
-- [ ] :OutlookAgendaTomorrow command
-- [ ] :OutlookAgendaWeek command
+### Phase 8: User Story 6 - Custom Time Range Queries ✅ Complete
+- [x] Tomorrow's events
+- [x] This week's events
+- [x] :OutlookAgendaTomorrow command
+- [x] :OutlookAgendaWeek command
+
+### Phase 9: User Story 7 - Smart Meeting Navigation ✅ Complete
+- [x] Jump to current meeting notes
+- [x] Time-based meeting detection
+- [x] Fallback to next upcoming meeting
+- [x] Interactive picker for overlapping meetings
+- [x] :OutlookJumpToCurrentNotes command
 
 ### Future Phases
-- Phase 9: Polish (error handling, logging, documentation)
 - Phase 10: Event filtering (declined events, calendar selection)
+- Phase 11: Polish (error handling, logging, documentation)
 
 ## Constitution Principles
 
@@ -749,11 +796,13 @@ Built with:
 
 ---
 
-**Status**: Phases 1-7 complete (58% of roadmap). The system now features:
+**Status**: Phases 1-9 complete (75% of roadmap). The system now features:
 - ✅ OAuth2 device-code authentication with automatic token refresh
 - ✅ Secure credential storage via macOS Keychain
 - ✅ User notes preservation across calendar refreshes
 - ✅ Rich event details with sorted attendees and smart truncation
 - ✅ Deleted event handling with user notes retention
+- ✅ Extended time ranges (today, tomorrow, week)
+- ✅ Smart navigation to current/next meeting notes
 
-Next up: Phase 8 (Custom Time Range Queries) for tomorrow/week views.
+Next up: Phase 10 (Event Filtering) for calendar and event type filtering.
