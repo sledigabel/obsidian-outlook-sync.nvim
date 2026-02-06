@@ -328,4 +328,68 @@ describe('renderer', function()
       assert.matches('and 85 more', content)
     end)
   end)
+
+  describe('render_deleted_event', function()
+    it('should render deleted event without start/end times', function()
+      local event = {
+        id = 'test-deleted',
+        subject = 'Cancelled Meeting',
+        deleted = true,
+        notes = { 'Important notes to keep' }
+      }
+
+      local lines = renderer.render_event(event)
+      local content = table.concat(lines, '\n')
+
+      -- Should have [deleted] marker
+      assert.matches('%[deleted%]', content)
+      
+      -- Should have subject
+      assert.matches('Cancelled Meeting', content)
+      
+      -- Should preserve notes
+      assert.matches('Important notes to keep', content)
+      
+      -- Should not error even without start/end times
+      assert.is_not_nil(lines)
+    end)
+
+    it('should render deleted event with nil start time', function()
+      local event = {
+        id = 'test-deleted-nil-start',
+        subject = 'Meeting with nil start',
+        deleted = true,
+        start = nil,
+        ['end'] = '2026-01-07T11:00:00',
+        notes = { 'Notes from meeting' }
+      }
+
+      local lines = renderer.render_event(event)
+      local content = table.concat(lines, '\n')
+
+      -- Should render with ?? placeholder for missing time
+      assert.matches('%?%?', content)
+      assert.matches('11:00', content)
+      assert.matches('%[deleted%]', content)
+    end)
+
+    it('should render deleted event with nil end time', function()
+      local event = {
+        id = 'test-deleted-nil-end',
+        subject = 'Meeting with nil end',
+        deleted = true,
+        start = '2026-01-07T10:00:00',
+        ['end'] = nil,
+        notes = { 'Notes from meeting' }
+      }
+
+      local lines = renderer.render_event(event)
+      local content = table.concat(lines, '\n')
+
+      -- Should render with ?? placeholder for missing time
+      assert.matches('10:00', content)
+      assert.matches('%?%?', content)
+      assert.matches('%[deleted%]', content)
+    end)
+  end)
 end)

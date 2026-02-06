@@ -17,17 +17,19 @@ function M.render_event(event)
 	-- Format event header
 	local header
 	local deleted_marker = event.deleted and ' [deleted]' or ''
+	local subject = event.subject and event.subject ~= '' and event.subject or '(Untitled Event)'
 
 	if event.isAllDay then
 		-- All-day event
-		local subject = event.subject ~= '' and event.subject or '(Untitled Event)'
 		header = string.format('## All Day - %s%s', subject, deleted_marker)
-	else
+	elseif event.start or event['end'] then
 		-- Timed event - parse times and format
 		local start_time = M._format_time(event.start)
 		local end_time = M._format_time(event['end'])
-		local subject = event.subject ~= '' and event.subject or '(Untitled Event)'
 		header = string.format('## %s-%s %s%s', start_time, end_time, subject, deleted_marker)
+	else
+		-- Deleted event without time information
+		header = string.format('## %s%s', subject, deleted_marker)
 	end
 
 	table.insert(lines, header)
@@ -136,9 +138,19 @@ function M.render_events(events)
 end
 
 -- _format_time formats an ISO 8601 datetime string to HH:MM format
--- @param datetime string: ISO 8601 datetime (e.g., "2026-01-07T09:00:00Z")
--- @return string: time in HH:MM format (e.g., "09:00")
+-- @param datetime string|nil: ISO 8601 datetime (e.g., "2026-01-07T09:00:00Z")
+-- @return string: time in HH:MM format (e.g., "09:00"), or "??" if nil
 function M._format_time(datetime)
+	-- Handle nil datetime (can happen with deleted events)
+	if not datetime then
+		return "??"
+	end
+	
+	-- Handle non-string datetime
+	if type(datetime) ~= 'string' then
+		return "??"
+	end
+	
 	-- Parse ISO 8601 format: YYYY-MM-DDTHH:MM:SS
 	local hour, min = datetime:match('T(%d%d):(%d%d):')
 	if hour and min then
