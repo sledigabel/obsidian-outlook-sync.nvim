@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/obsidian-outlook-sync/outlook-md/internal/auth"
@@ -234,22 +237,64 @@ func handleWeekCommand(format string, timezone string) error {
 	return fetchAndOutputEvents(format, actualTimezone, startOfWeek, endOfWeek)
 }
 
-// getActualTimezone converts "Local" to actual IANA timezone name
+// getActualTimezone converts "Local" to an actual IANA timezone name
+// (e.g. "Europe/London") suitable for the Microsoft Graph API.
 func getActualTimezone(timezone string, loc *time.Location) string {
-	actualTimezone := timezone
-	if timezone == "Local" {
-		now := time.Now()
-		actualTimezone, _ = now.Zone()
+	if timezone != "Local" {
+		return timezone
+	}
 
-		if actualTimezone == "" || len(actualTimezone) <= 3 {
-			if loc.String() != "Local" {
-				actualTimezone = loc.String()
-			} else {
-				actualTimezone = "UTC"
+	// If time.LoadLocation("Local") resolved to a real IANA name, use it.
+	// On some systems this already returns e.g. "Europe/London".
+	if name := loc.String(); name != "Local" && name != "" {
+		return name
+	}
+
+	// Try to resolve the IANA name from the OS.
+	if iana := resolveSystemIANA(); iana != "" {
+		return iana
+	}
+
+	// Last resort: fall back to UTC.
+	return "UTC"
+}
+
+// resolveSystemIANA attempts to read the IANA timezone name from the OS.
+func resolveSystemIANA() string {
+	switch runtime.GOOS {
+	case "darwin", "linux", "freebsd":
+		return resolveUnixIANA()
+	default:
+		return ""
+	}
+}
+
+// ianaPattern matches a valid IANA region/city timezone name.
+var ianaPattern = regexp.MustCompile(`^[A-Za-z]+/[\w+\-/]+$`)
+
+// resolveUnixIANA resolves the IANA timezone from Unix-like systems by:
+//  1. Reading /etc/localtime symlink (macOS, most Linux)
+//  2. Reading /etc/timezone (Debian/Ubuntu)
+func resolveUnixIANA() string {
+	// Method 1: /etc/localtime is typically a symlink into zoneinfo
+	if target, err := os.Readlink("/etc/localtime"); err == nil {
+		if idx := strings.Index(target, "zoneinfo/"); idx >= 0 {
+			iana := target[idx+len("zoneinfo/"):]
+			if ianaPattern.MatchString(iana) {
+				return iana
 			}
 		}
 	}
-	return actualTimezone
+
+	// Method 2: /etc/timezone contains the IANA name directly (Debian/Ubuntu)
+	if data, err := os.ReadFile("/etc/timezone"); err == nil {
+		iana := strings.TrimSpace(string(data))
+		if ianaPattern.MatchString(iana) {
+			return iana
+		}
+	}
+
+	return ""
 }
 
 // fetchAndOutputEvents is a helper to fetch and format calendar events
