@@ -232,4 +232,116 @@ function M.find_notes_line(lines, start_idx, end_idx)
 	return nil
 end
 
+-- extract_title extracts the meeting title from the ## header line.
+-- Handles timed events (## HH:MM-HH:MM Subject), all-day events
+-- (## All Day - Subject), and strips trailing [deleted] markers.
+-- @param lines table: array of all lines
+-- @param start_idx number: 1-indexed start of event block
+-- @param end_idx number: 1-indexed end of event block
+-- @return string|nil: meeting title, or nil if no ## header found
+local function extract_title(lines, start_idx, end_idx)
+  for i = start_idx, end_idx do
+    local line = lines[i]
+    if line:match('^## ') then
+      local title
+
+      -- Timed event: ## HH:MM-HH:MM Subject
+      title = line:match('^## %d%d:%d%d%-%d%d:%d%d (.+)$')
+
+      -- All-day event: ## All Day - Subject
+      if not title then
+        title = line:match('^## All Day %- (.+)$')
+      end
+
+      -- Fallback: strip ## prefix
+      if not title then
+        title = line:sub(4)
+      end
+
+      -- Strip trailing [deleted]
+      if title then
+        title = title:gsub('%s*%[deleted%]%s*$', '')
+      end
+
+      return title ~= '' and title or nil
+    end
+  end
+  return nil
+end
+
+-- extract_attendees extracts attendee names from the ### Attendees section.
+-- Returns an array of trimmed name strings (including "...and N more" lines).
+-- Returns an empty table if the section is absent.
+-- @param lines table: array of all lines
+-- @param start_idx number: 1-indexed start of event block
+-- @param end_idx number: 1-indexed end of event block
+-- @return table: array of attendee name strings
+local function extract_attendees(lines, start_idx, end_idx)
+  local attendees = {}
+  local in_section = false
+
+  for i = start_idx, end_idx do
+    local line = lines[i]
+
+    if line:match('^### Attendees') then
+      in_section = true
+    elseif in_section then
+      -- Stop at next ### section
+      if line:match('^### ') then
+        break
+      end
+      -- Collect non-empty lines
+      local trimmed = line:match('^%s*(.-)%s*$')
+      if trimmed and trimmed ~= '' then
+        table.insert(attendees, trimmed)
+      end
+    end
+  end
+
+  return attendees
+end
+
+-- get_event_at_cursor returns meeting properties for the event at the cursor.
+-- Returns nil if the cursor is not inside any event block.
+-- @param bufnr number|nil: buffer number (defaults to 0, current buffer)
+-- @return table|nil: {id, title, startUnix, endUnix, isAllDay, attendees}
+function M.get_event_at_cursor(bufnr)
+  bufnr = bufnr or 0
+
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local cursor_row = vim.api.nvim_win_get_cursor(0)[1]  -- 1-indexed
+
+  local start_line, end_line = M.find_managed_region(lines)
+  if not start_line then
+    return nil
+  end
+
+  -- Cursor must be strictly inside the region (not on the marker lines)
+  if cursor_row <= start_line or cursor_row >= end_line then
+    return nil
+  end
+
+  local events = M.parse_managed_region_events(lines, start_line, end_line)
+
+  for _, event in ipairs(events) do
+    -- Trim trailing blank lines from event boundary for cursor hit-testing
+    local content_end = event.end_line
+    while content_end > event.start_line and lines[content_end]:match('^%s*$') do
+      content_end = content_end - 1
+    end
+    if cursor_row >= event.start_line and cursor_row <= content_end then
+      return {
+        id        = event.id,
+        title     = extract_title(lines, event.start_line, event.end_line),
+        startUnix = event.startUnix,
+        endUnix   = event.endUnix,
+        isAllDay  = event.startUnix == nil,
+        attendees = extract_attendees(lines, event.start_line, event.end_line),
+      }
+    end
+  end
+
+  return nil
+end
+
 return M
