@@ -309,6 +309,8 @@ function M.get_event_at_cursor(bufnr)
   bufnr = bufnr or 0
 
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  -- NOTE: cursor is always read from window 0 (the focused window). If bufnr
+  -- is displayed in a non-focused window this will return the wrong position.
   local cursor_row = vim.api.nvim_win_get_cursor(0)[1]  -- 1-indexed
 
   local start_line, end_line = M.find_managed_region(lines)
@@ -335,7 +337,7 @@ function M.get_event_at_cursor(bufnr)
         title     = extract_title(lines, event.start_line, event.end_line),
         startUnix = event.startUnix,
         endUnix   = event.endUnix,
-        isAllDay  = event.startUnix == nil,
+        isAllDay  = event.startUnix == nil,  -- NOTE: assumes missing timestamps = all-day
         attendees = extract_attendees(lines, event.start_line, event.end_line),
       }
     end
