@@ -153,4 +153,33 @@ describe('merger', function()
       assert.is_false(e4.deleted or false)
     end)
   end)
+
+  describe('timestamp preservation', function()
+    it('preserves startUnix/endUnix from old event when re-syncing', function()
+      local old_events = {{
+        id = 'evt-1', startUnix = 1748163600, endUnix = 1748165400,
+        notes = {}
+      }}
+      local new_events = {{
+        id = 'evt-1', startUnix = 1748163600, endUnix = 1748165400,
+        subject = 'Standup', organizer = { name='A', email='a@b.com' }, attendees = {}
+      }}
+      local merged = merger.merge_events(old_events, new_events)
+      assert.equals(1748163600, merged[1].startUnix)
+      assert.equals(1748165400, merged[1].endUnix)
+    end)
+
+    it('falls back to old timestamps when new event has nil (deleted path)', function()
+      local old_events = {{
+        id = 'evt-gone', startUnix = 1748163600, endUnix = 1748165400,
+        notes = { 'Important note' }, deleted = false
+      }}
+      local new_events = {}
+      local merged = merger.merge_events(old_events, new_events)
+      -- Deleted event with meaningful notes should be retained
+      assert.equals(1, #merged)
+      assert.equals(1748163600, merged[1].startUnix)
+      assert.equals(1748165400, merged[1].endUnix)
+    end)
+  end)
 end)

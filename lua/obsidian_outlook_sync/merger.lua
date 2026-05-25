@@ -73,6 +73,8 @@ function M.merge_events(old_events, new_events)
 			-- Event exists in old - preserve notes
 			local old_event = old_by_id[event_id]
 			new_event.notes = old_event.notes
+			new_event.startUnix = new_event.startUnix or old_event.startUnix
+			new_event.endUnix   = new_event.endUnix   or old_event.endUnix
 		end
 
 		-- Only include if it passes the filter
