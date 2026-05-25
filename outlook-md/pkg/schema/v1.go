@@ -23,6 +23,8 @@ type CalendarEvent struct {
 	IsAllDay  bool       `json:"isAllDay"`
 	Start     time.Time  `json:"start"`
 	End       time.Time  `json:"end"`
+	StartUnix int64      `json:"startUnix"` // UTC Unix epoch of Start
+	EndUnix   int64      `json:"endUnix"`   // UTC Unix epoch of End
 	Location  string     `json:"location"`
 	Organizer Organizer  `json:"organizer"`
 	Attendees []Attendee `json:"attendees"`

@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/obsidian-outlook-sync/outlook-md/pkg/schema"
 )
@@ -77,6 +78,14 @@ func ValidateCalendarEvent(t *testing.T, event *schema.CalendarEvent, index int)
 		t.Errorf("Event %d: Attendees must not be nil (use empty array [])", index)
 	}
 
+	// Timestamps must match Start/End UTC Unix values
+	if event.StartUnix != event.Start.UTC().Unix() {
+		t.Errorf("Event %d: StartUnix %d != Start.UTC().Unix() %d", index, event.StartUnix, event.Start.UTC().Unix())
+	}
+	if event.EndUnix != event.End.UTC().Unix() {
+		t.Errorf("Event %d: EndUnix %d != End.UTC().Unix() %d", index, event.EndUnix, event.End.UTC().Unix())
+	}
+
 	// Validate attendee types
 	for j, attendee := range event.Attendees {
 		if attendee.Type != "required" && attendee.Type != "optional" && attendee.Type != "resource" {
@@ -114,4 +123,23 @@ func ValidateJSONParsing(t *testing.T, output *schema.CLIOutput) {
 func TestSchemaValidation(t *testing.T) {
 	// This test will be expanded in Phase 3 (User Story 1)
 	t.Skip("Placeholder test - will be implemented in Phase 3")
+}
+
+func TestCalendarEventTimestamps(t *testing.T) {
+	start, _ := time.Parse(time.RFC3339, "2026-05-25T09:00:00Z")
+	end, _ := time.Parse(time.RFC3339, "2026-05-25T09:30:00Z")
+	event := schema.CalendarEvent{
+		ID:        "test-id",
+		Start:     start,
+		End:       end,
+		StartUnix: start.UTC().Unix(),
+		EndUnix:   end.UTC().Unix(),
+		Attendees: []schema.Attendee{},
+	}
+	if event.StartUnix != 1779699600 {
+		t.Errorf("unexpected StartUnix: %d", event.StartUnix)
+	}
+	if event.EndUnix != 1779701400 {
+		t.Errorf("unexpected EndUnix: %d", event.EndUnix)
+	}
 }
