@@ -210,11 +210,13 @@ func parseCalendarEvents(graphEvents []graphEvent, timezone string) ([]schema.Ca
 
 		// Build event
 		event := schema.CalendarEvent{
-			ID:       ge.ID,
-			Subject:  ge.Subject,
-			IsAllDay: ge.IsAllDay,
-			Start:    start,
-			End:      end,
+			ID:        ge.ID,
+			Subject:   ge.Subject,
+			IsAllDay:  ge.IsAllDay,
+			Start:     start,
+			End:       end,
+			StartUnix: start.UTC().Unix(),
+			EndUnix:   end.UTC().Unix(),
 			Location: ge.Location.DisplayName,
 			Organizer: schema.Organizer{
 				Name:  ge.Organizer.EmailAddress.Name,

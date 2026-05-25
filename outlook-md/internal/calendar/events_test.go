@@ -2,6 +2,7 @@ package calendar
 
 import (
 	"testing"
+	"time"
 
 	"github.com/obsidian-outlook-sync/outlook-md/pkg/schema"
 )
@@ -122,6 +123,80 @@ func TestSortAttendees(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestParseCalendarEventsTimestamps verifies StartUnix and EndUnix are populated
+// correctly, including non-UTC timezones (America/New_York).
+func TestParseCalendarEventsTimestamps(t *testing.T) {
+	// "2026-05-25T09:00:00" in America/New_York = 13:00 UTC = Unix 1748178000
+	// "2026-05-25T10:00:00" in America/New_York = 14:00 UTC = Unix 1748181600
+	events := []graphEvent{
+		{
+			ID:      "TEST-001",
+			Subject: "Morning Standup",
+			Start: struct {
+				DateTime string `json:"dateTime"`
+				TimeZone string `json:"timeZone"`
+			}{DateTime: "2026-05-25T09:00:00", TimeZone: "America/New_York"},
+			End: struct {
+				DateTime string `json:"dateTime"`
+				TimeZone string `json:"timeZone"`
+			}{DateTime: "2026-05-25T10:00:00", TimeZone: "America/New_York"},
+			Attendees: []struct {
+				EmailAddress struct {
+					Name    string `json:"name"`
+					Address string `json:"address"`
+				} `json:"emailAddress"`
+				Type string `json:"type"`
+			}{
+				{
+					EmailAddress: struct {
+						Name    string `json:"name"`
+						Address string `json:"address"`
+					}{Name: "Bob", Address: "bob@example.com"},
+					Type: "required",
+				},
+			},
+			ResponseStatus: struct {
+				Response string `json:"response"`
+			}{Response: "accepted"},
+		},
+	}
+
+	result, err := parseCalendarEvents(events, "America/New_York")
+	if err != nil {
+		t.Fatalf("parseCalendarEvents failed: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(result))
+	}
+
+	event := result[0]
+
+	// Compute expected Unix timestamps from known UTC times
+	loc, _ := time.LoadLocation("America/New_York")
+	expectedStart := time.Date(2026, 5, 25, 9, 0, 0, 0, loc).UTC().Unix()
+	expectedEnd := time.Date(2026, 5, 25, 10, 0, 0, 0, loc).UTC().Unix()
+
+	if event.StartUnix != expectedStart {
+		t.Errorf("StartUnix: got %d, want %d", event.StartUnix, expectedStart)
+	}
+	if event.EndUnix != expectedEnd {
+		t.Errorf("EndUnix: got %d, want %d", event.EndUnix, expectedEnd)
+	}
+
+	// Sanity: both should be non-zero
+	if event.StartUnix == 0 {
+		t.Error("StartUnix is 0, expected non-zero UTC Unix timestamp")
+	}
+	if event.EndUnix == 0 {
+		t.Error("EndUnix is 0, expected non-zero UTC Unix timestamp")
+	}
+
+	// StartUnix should be less than EndUnix
+	if event.StartUnix >= event.EndUnix {
+		t.Errorf("StartUnix (%d) should be less than EndUnix (%d)", event.StartUnix, event.EndUnix)
 	}
 }
 
