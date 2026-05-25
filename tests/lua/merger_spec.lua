@@ -155,9 +155,27 @@ describe('merger', function()
   end)
 
   describe('timestamp preservation', function()
-    it('preserves startUnix/endUnix from old event when re-syncing', function()
+    it('falls back to old timestamps when new event has no timestamps (or fallback)', function()
+      -- new_event arrives from CLI without timestamps (e.g. older CLI binary)
+      -- old_event has timestamps parsed from buffer — the or-fallback must kick in
       local old_events = {{
         id = 'evt-1', startUnix = 1748163600, endUnix = 1748165400,
+        notes = {}
+      }}
+      local new_events = {{
+        id = 'evt-1',
+        subject = 'Standup', organizer = { name='A', email='a@b.com' }, attendees = {}
+        -- no startUnix / endUnix intentionally
+      }}
+      local merged = merger.merge_events(old_events, new_events)
+      assert.equals(1748163600, merged[1].startUnix)
+      assert.equals(1748165400, merged[1].endUnix)
+    end)
+
+    it('uses fresh timestamps from CLI when new event provides them', function()
+      -- new_event has fresh timestamps (normal path) — or-fallback should not overwrite
+      local old_events = {{
+        id = 'evt-1', startUnix = 1111111111, endUnix = 1111113000,
         notes = {}
       }}
       local new_events = {{
@@ -165,18 +183,20 @@ describe('merger', function()
         subject = 'Standup', organizer = { name='A', email='a@b.com' }, attendees = {}
       }}
       local merged = merger.merge_events(old_events, new_events)
+      -- Fresh CLI values should win over old stale ones
       assert.equals(1748163600, merged[1].startUnix)
       assert.equals(1748165400, merged[1].endUnix)
     end)
 
-    it('falls back to old timestamps when new event has nil (deleted path)', function()
+    it('retains timestamps on deleted event with meaningful notes', function()
+      -- deleted path: event disappears from CLI but is retained due to notes
+      -- timestamps are already on old_event from parser and pass through directly
       local old_events = {{
         id = 'evt-gone', startUnix = 1748163600, endUnix = 1748165400,
-        notes = { 'Important note' }, deleted = false
+        notes = { 'Important note' }
       }}
       local new_events = {}
       local merged = merger.merge_events(old_events, new_events)
-      -- Deleted event with meaningful notes should be retained
       assert.equals(1, #merged)
       assert.equals(1748163600, merged[1].startUnix)
       assert.equals(1748165400, merged[1].endUnix)
