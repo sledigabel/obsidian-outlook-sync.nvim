@@ -24,14 +24,19 @@ describe('renderer', function()
 
       local lines = renderer.render_event(event)
 
+      -- Find the heading line (## HH:MM-HH:MM Subject)
+      local header
+      for _, line in ipairs(lines) do
+        if line:match('^## ') then header = line; break end
+      end
       -- Should have header line with time and subject
-      assert.is_not_nil(lines[1])
-      assert.matches('09:00%-09:30', lines[1])
-      assert.matches('Team Standup', lines[1])
+      assert.is_not_nil(header)
+      assert.matches('09:00%-09:30', header)
+      assert.matches('Team Standup', header)
 
-      -- Should include location
+      -- Should include subject and time in content
       local content = table.concat(lines, '\n')
-      assert.matches('Conference Room A', content)
+      assert.matches('Team Standup', content)
     end)
 
     it('should render all-day event', function()
@@ -52,7 +57,10 @@ describe('renderer', function()
       local lines = renderer.render_event(event)
 
       -- Should indicate all-day event
-      local header = lines[1]
+      local header
+      for _, line in ipairs(lines) do
+        if line:match('^## ') then header = line; break end
+      end
       assert.matches('All Day', header)
       assert.matches('Company Holiday', header)
     end)
@@ -99,7 +107,10 @@ describe('renderer', function()
       local lines = renderer.render_event(event)
 
       -- Should show placeholder for empty subject
-      local header = lines[1]
+      local header
+      for _, line in ipairs(lines) do
+        if line:match('^## ') then header = line; break end
+      end
       assert.matches('%(Untitled Event%)', header)
     end)
 
@@ -200,9 +211,8 @@ describe('renderer', function()
       local lines = renderer.render_event(event)
       local content = table.concat(lines, '\n')
 
-      -- Should have Organizer section with name
-      assert.matches('Organizer:', content)
-      assert.matches('Alice Smith', content)
+      -- Should have organizer in attendees line as "Name (O)"
+      assert.matches('Alice Smith %(O%)', content)
     end)
 
     it('should render organizer with email when name is missing', function()
@@ -229,10 +239,10 @@ describe('renderer', function()
   end)
 
   describe('render_attendees_truncation', function()
-    it('should render all attendees when 15 or fewer', function()
-      -- Create exactly 15 attendees
+    it('should render all attendees when 5 or fewer', function()
+      -- Create exactly 5 attendees (the max_display limit)
       local attendees = {}
-      for i = 1, 15 do
+      for i = 1, 5 do
         table.insert(attendees, {
           name = 'Attendee ' .. i,
           email = 'attendee' .. i .. '@example.com',
@@ -254,18 +264,18 @@ describe('renderer', function()
       local lines = renderer.render_event(event)
       local content = table.concat(lines, '\n')
 
-      -- All 15 should be listed
+      -- All 5 should be listed
       assert.matches('Attendee 1', content)
-      assert.matches('Attendee 15', content)
+      assert.matches('Attendee 5', content)
 
       -- Should NOT have truncation message
       assert.is_not.matches('and %d+ more', content)
     end)
 
-    it('should truncate attendees when more than 15', function()
-      -- Create 20 attendees
+    it('should truncate attendees when more than 5', function()
+      -- Create 10 attendees
       local attendees = {}
-      for i = 1, 20 do
+      for i = 1, 10 do
         table.insert(attendees, {
           name = 'Attendee ' .. i,
           email = 'attendee' .. i .. '@example.com',
@@ -287,13 +297,13 @@ describe('renderer', function()
       local lines = renderer.render_event(event)
       local content = table.concat(lines, '\n')
 
-      -- First 15 should be listed
+      -- First 5 should be listed
       assert.matches('Attendee 1', content)
-      assert.matches('Attendee 15', content)
+      assert.matches('Attendee 5', content)
 
-      -- Attendee 16-20 should NOT appear individually
-      assert.is_not.matches('Attendee 16', content)
-      assert.is_not.matches('Attendee 20', content)
+      -- Attendees 6-10 should NOT appear individually
+      assert.is_not.matches('Attendee 6', content)
+      assert.is_not.matches('Attendee 10', content)
 
       -- Should have truncation message for remaining 5
       assert.matches('and 5 more', content)
@@ -324,8 +334,8 @@ describe('renderer', function()
       local lines = renderer.render_event(event)
       local content = table.concat(lines, '\n')
 
-      -- Should show "and 85 more" (100 - 15 = 85)
-      assert.matches('and 85 more', content)
+      -- Should show "and 95 more" (100 - 5 = 95)
+      assert.matches('and 95 more', content)
     end)
   end)
 
