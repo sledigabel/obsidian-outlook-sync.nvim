@@ -274,4 +274,41 @@ describe('parser', function()
       assert.equals(8, notes_line)
     end)
   end)
+
+  describe('extract timestamps', function()
+    it('extracts startUnix from TIMESTAMP line', function()
+      local line = '<!-- TIMESTAMP: 1748163600 -->'
+      local ts = parser.extract_timestamp(line)
+      assert.equals(1748163600, ts)
+    end)
+
+    it('extracts endUnix from TIMESTAMP_END line', function()
+      local line = '<!-- TIMESTAMP_END: 1748165400 -->'
+      local ts = parser.extract_timestamp_end(line)
+      assert.equals(1748165400, ts)
+    end)
+
+    it('returns nil for non-matching line', function()
+      assert.is_nil(parser.extract_timestamp('<!-- EVENT_ID: abc -->'))
+      assert.is_nil(parser.extract_timestamp_end('<!-- EVENT_ID: abc -->'))
+    end)
+
+    it('extract_event_with_notes populates startUnix and endUnix', function()
+      local lines = {
+        '<!-- EVENT_ID: abc-123 -->',
+        '<!-- TIMESTAMP: 1748163600 -->',
+        '<!-- TIMESTAMP_END: 1748165400 -->',
+        '## 09:00-09:30 Standup',
+        '',
+        '### Notes',
+        '<!-- NOTES_START -->',
+        '',
+        '<!-- NOTES_END -->',
+      }
+      local event = parser.extract_event_with_notes(lines, 1, #lines)
+      assert.equals('abc-123',    event.id)
+      assert.equals(1748163600,   event.startUnix)
+      assert.equals(1748165400,   event.endUnix)
+    end)
+  end)
 end)

@@ -9,6 +9,8 @@ M.AGENDA_END = '<!-- AGENDA_END -->'
 M.EVENT_ID_PREFIX = '<!-- EVENT_ID: '
 M.NOTES_START = '<!-- NOTES_START -->'
 M.NOTES_END = '<!-- NOTES_END -->'
+M.TIMESTAMP_PREFIX     = '<!-- TIMESTAMP: '
+M.TIMESTAMP_END_PREFIX = '<!-- TIMESTAMP_END: '
 
 -- find_managed_region searches for AGENDA_START and AGENDA_END markers
 -- @param lines table: array of line strings
@@ -80,6 +82,30 @@ function M.extract_event_id(line)
 	return line:sub(id_start, id_end - 1)
 end
 
+-- extract_timestamp extracts UTC Unix start timestamp from TIMESTAMP marker line
+-- @param line string
+-- @return number|nil
+function M.extract_timestamp(line)
+	local prefix_start = line:find(M.TIMESTAMP_PREFIX, 1, true)
+	if not prefix_start then return nil end
+	local val_start = prefix_start + #M.TIMESTAMP_PREFIX
+	local val_end   = line:find(' -->', val_start, true)
+	if not val_end then return nil end
+	return tonumber(line:sub(val_start, val_end - 1))
+end
+
+-- extract_timestamp_end extracts UTC Unix end timestamp from TIMESTAMP_END marker line
+-- @param line string
+-- @return number|nil
+function M.extract_timestamp_end(line)
+	local prefix_start = line:find(M.TIMESTAMP_END_PREFIX, 1, true)
+	if not prefix_start then return nil end
+	local val_start = prefix_start + #M.TIMESTAMP_END_PREFIX
+	local val_end   = line:find(' -->', val_start, true)
+	if not val_end then return nil end
+	return tonumber(line:sub(val_start, val_end - 1))
+end
+
 -- extract_event_with_notes extracts a single event with its notes pocket
 -- @param lines table: array of all lines
 -- @param start_idx number: 1-indexed start of event block
@@ -90,7 +116,9 @@ function M.extract_event_with_notes(lines, start_idx, end_idx)
 		start_line = start_idx,
 		end_line = end_idx,
 		id = nil,
-		notes = nil
+		notes = nil,
+		startUnix = nil,
+		endUnix = nil,
 	}
 
 	local notes_start = nil
@@ -102,6 +130,14 @@ function M.extract_event_with_notes(lines, start_idx, end_idx)
 		-- Extract EVENT_ID
 		if not event.id then
 			event.id = M.extract_event_id(line)
+		end
+
+		-- Extract timestamps
+		if not event.startUnix then
+			event.startUnix = M.extract_timestamp(line)
+		end
+		if not event.endUnix then
+			event.endUnix = M.extract_timestamp_end(line)
 		end
 
 		-- Find notes pocket boundaries
