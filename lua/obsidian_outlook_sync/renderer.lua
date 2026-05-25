@@ -14,6 +14,14 @@ function M.render_event(event)
 		table.insert(lines, string.format('<!-- EVENT_ID: %s -->', event.id))
 	end
 
+	-- Emit UTC Unix timestamps for start/end (write-once metadata)
+	if event.startUnix then
+		table.insert(lines, string.format('<!-- TIMESTAMP: %d -->', event.startUnix))
+	end
+	if event.endUnix then
+		table.insert(lines, string.format('<!-- TIMESTAMP_END: %d -->', event.endUnix))
+	end
+
 	-- Format event header
 	local header
 	local deleted_marker = event.deleted and ' [deleted]' or ''

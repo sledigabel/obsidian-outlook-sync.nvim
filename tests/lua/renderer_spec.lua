@@ -393,3 +393,53 @@ describe('renderer', function()
     end)
   end)
 end)
+
+describe('render_event timestamps', function()
+  it('emits TIMESTAMP and TIMESTAMP_END when startUnix/endUnix present', function()
+    local event = {
+      id = 'ts-test-1',
+      subject = 'Standup',
+      isAllDay = false,
+      start = '2026-05-25T09:00:00Z',
+      ['end'] = '2026-05-25T09:30:00Z',
+      startUnix = 1748163600,
+      endUnix   = 1748165400,
+      organizer = { name = 'Alice', email = 'alice@example.com' },
+      attendees = {}
+    }
+    local lines = renderer.render_event(event)
+    local content = table.concat(lines, '\n')
+    assert.matches('<!%-%- TIMESTAMP: 1748163600 %-%->',  content)
+    assert.matches('<!%-%- TIMESTAMP_END: 1748165400 %-%->',  content)
+  end)
+
+  it('TIMESTAMP appears between EVENT_ID and heading', function()
+    local event = {
+      id = 'ts-test-2', subject = 'Standup', isAllDay = false,
+      start = '2026-05-25T09:00:00Z', ['end'] = '2026-05-25T09:30:00Z',
+      startUnix = 1748163600, endUnix = 1748165400,
+      organizer = { name = 'Alice', email = 'a@example.com' }, attendees = {}
+    }
+    local lines = renderer.render_event(event)
+    -- Find positions
+    local id_pos, ts_pos, heading_pos
+    for i, line in ipairs(lines) do
+      if line:match('EVENT_ID')           then id_pos      = i end
+      if line:match('TIMESTAMP: ')        then ts_pos      = i end
+      if line:match('^## ')               then heading_pos = i end
+    end
+    assert.is_true(id_pos < ts_pos)
+    assert.is_true(ts_pos < heading_pos)
+  end)
+
+  it('omits timestamp lines when startUnix/endUnix absent', function()
+    local event = {
+      id = 'ts-test-3', subject = 'Old Meeting', isAllDay = false,
+      start = '2026-05-25T09:00:00Z', ['end'] = '2026-05-25T09:30:00Z',
+      organizer = { name = 'Bob', email = 'b@example.com' }, attendees = {}
+    }
+    local lines = renderer.render_event(event)
+    local content = table.concat(lines, '\n')
+    assert.is_not.matches('TIMESTAMP', content)
+  end)
+end)
