@@ -175,4 +175,14 @@ function M.jump_to_current_notes()
 	end
 end
 
+-- event_at_cursor prints the meeting properties for the event under the cursor
+function M.event_at_cursor()
+	local event = parser.get_event_at_cursor(0)
+	if not event then
+		vim.notify('Cursor is not inside a meeting block', vim.log.levels.WARN)
+		return
+	end
+	vim.notify(vim.fn.json_encode(event), vim.log.levels.INFO)
+end
+
 return M

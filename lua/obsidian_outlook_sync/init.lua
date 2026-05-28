@@ -70,6 +70,11 @@ function M.setup(opts)
 	end, {
 		desc = 'Jump to notes section of current or next meeting'
 	})
+	vim.api.nvim_create_user_command('OutlookEventAtCursor', function()
+		require('obsidian_outlook_sync.commands').event_at_cursor()
+	end, {
+		desc = 'Print meeting properties for the event under the cursor'
+	})
 end
 
 return M
