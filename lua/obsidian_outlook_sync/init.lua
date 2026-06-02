@@ -70,6 +70,19 @@ function M.setup(opts)
 	end, {
 		desc = 'Jump to notes section of current or next meeting'
 	})
+
+	vim.api.nvim_create_user_command('OutlookJumpToNextMeeting', function()
+		require('obsidian_outlook_sync.commands').jump_to_next_meeting()
+	end, {
+		desc = 'Jump to notes section of next meeting from cursor'
+	})
+
+	vim.api.nvim_create_user_command('OutlookJumpToPreviousMeeting', function()
+		require('obsidian_outlook_sync.commands').jump_to_previous_meeting()
+	end, {
+		desc = 'Jump to notes section of previous meeting from cursor'
+	})
+
 	vim.api.nvim_create_user_command('OutlookEventAtCursor', function()
 		require('obsidian_outlook_sync.commands').event_at_cursor()
 	end, {

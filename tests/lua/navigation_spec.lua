@@ -187,4 +187,126 @@ describe('navigation', function()
       assert.equals('', subject)
     end)
   end)
+
+  describe('find_next_meeting_from_cursor', function()
+    it('should find first event when cursor is before all events', function()
+      local events = {
+        {start_line = 10, end_line = 15},
+        {start_line = 20, end_line = 25},
+        {start_line = 30, end_line = 35},
+      }
+      local cursor_line = 5
+
+      local next = navigation.find_next_meeting_from_cursor(events, cursor_line)
+      assert.is_not_nil(next)
+      assert.equals(10, next.start_line)
+    end)
+
+    it('should skip current event block when cursor is inside it', function()
+      local events = {
+        {start_line = 10, end_line = 15},
+        {start_line = 20, end_line = 25},
+        {start_line = 30, end_line = 35},
+      }
+      local cursor_line = 12  -- Inside first event
+
+      local next = navigation.find_next_meeting_from_cursor(events, cursor_line)
+      assert.is_not_nil(next)
+      assert.equals(20, next.start_line)
+    end)
+
+    it('should find next event when cursor is between two events', function()
+      local events = {
+        {start_line = 10, end_line = 15},
+        {start_line = 20, end_line = 25},
+        {start_line = 30, end_line = 35},
+      }
+      local cursor_line = 18  -- Between first and second
+
+      local next = navigation.find_next_meeting_from_cursor(events, cursor_line)
+      assert.is_not_nil(next)
+      assert.equals(20, next.start_line)
+    end)
+
+    it('should return nil when cursor is after all events', function()
+      local events = {
+        {start_line = 10, end_line = 15},
+        {start_line = 20, end_line = 25},
+        {start_line = 30, end_line = 35},
+      }
+      local cursor_line = 40
+
+      local next = navigation.find_next_meeting_from_cursor(events, cursor_line)
+      assert.is_nil(next)
+    end)
+
+    it('should return nil when events list is empty', function()
+      local events = {}
+      local cursor_line = 10
+
+      local next = navigation.find_next_meeting_from_cursor(events, cursor_line)
+      assert.is_nil(next)
+    end)
+  end)
+
+  describe('find_previous_meeting_from_cursor', function()
+    it('should find last event when cursor is after all events', function()
+      local events = {
+        {start_line = 10, end_line = 15},
+        {start_line = 20, end_line = 25},
+        {start_line = 30, end_line = 35},
+      }
+      local cursor_line = 40
+
+      local prev = navigation.find_previous_meeting_from_cursor(events, cursor_line)
+      assert.is_not_nil(prev)
+      assert.equals(30, prev.start_line)
+    end)
+
+    it('should skip current event block when cursor is inside it', function()
+      local events = {
+        {start_line = 10, end_line = 15},
+        {start_line = 20, end_line = 25},
+        {start_line = 30, end_line = 35},
+      }
+      local cursor_line = 22  -- Inside second event
+
+      local prev = navigation.find_previous_meeting_from_cursor(events, cursor_line)
+      assert.is_not_nil(prev)
+      assert.equals(10, prev.start_line)
+    end)
+
+    it('should find previous event when cursor is between two events', function()
+      local events = {
+        {start_line = 10, end_line = 15},
+        {start_line = 20, end_line = 25},
+        {start_line = 30, end_line = 35},
+      }
+      local cursor_line = 28  -- Between second and third
+
+      local prev = navigation.find_previous_meeting_from_cursor(events, cursor_line)
+      assert.is_not_nil(prev)
+      assert.equals(20, prev.start_line)
+    end)
+
+    it('should return nil when cursor is before all events', function()
+      local events = {
+        {start_line = 10, end_line = 15},
+        {start_line = 20, end_line = 25},
+        {start_line = 30, end_line = 35},
+      }
+      local cursor_line = 5
+
+      local prev = navigation.find_previous_meeting_from_cursor(events, cursor_line)
+      assert.is_nil(prev)
+    end)
+
+    it('should return nil when events list is empty', function()
+      local events = {}
+      local cursor_line = 10
+
+      local prev = navigation.find_previous_meeting_from_cursor(events, cursor_line)
+      assert.is_nil(prev)
+    end)
+  end)
 end)

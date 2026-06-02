@@ -140,6 +140,35 @@ function M.show_meeting_picker(events, callback)
 	end)
 end
 
+-- find_next_meeting_from_cursor finds the next meeting event after the cursor position
+-- @param events table: array of events with .start_line field (assumed sorted ascending by start_line)
+-- @param cursor_line number: current cursor line (1-indexed)
+-- @return table|nil: first event with start_line > cursor_line, or nil if none
+function M.find_next_meeting_from_cursor(events, cursor_line)
+	for _, event in ipairs(events) do
+		if event.start_line > cursor_line then
+			return event
+		end
+	end
+	return nil
+end
+
+-- find_previous_meeting_from_cursor finds the previous meeting event before the cursor position
+-- @param events table: array of events with .end_line field (assumed sorted ascending by start_line)
+-- @param cursor_line number: current cursor line (1-indexed)
+-- @return table|nil: last event with end_line < cursor_line, or nil if none
+function M.find_previous_meeting_from_cursor(events, cursor_line)
+	local prev_event = nil
+	for _, event in ipairs(events) do
+		if event.end_line < cursor_line then
+			prev_event = event
+		else
+			break  -- Events are sorted, so once we pass cursor_line we're done
+		end
+	end
+	return prev_event
+end
+
 -- parse_subject_from_header extracts subject from markdown header
 -- @param line string: header line (e.g., "## 09:00-10:00 Team Meeting")
 -- @return string: subject or empty string

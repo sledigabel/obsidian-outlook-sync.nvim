@@ -185,4 +185,114 @@ function M.event_at_cursor()
 	vim.notify(vim.fn.json_encode(event), vim.log.levels.INFO)
 end
 
+-- jump_to_next_meeting positions cursor on notes section of the next meeting after cursor
+function M.jump_to_next_meeting()
+	-- Get current buffer lines
+	local bufnr = 0  -- Current buffer
+	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+	
+	-- Find managed region
+	local start_line, end_line = parser.find_managed_region(lines)
+	if not start_line or not end_line then
+		return
+	end
+	
+	-- Parse existing events from managed region
+	local parsed_events = parser.parse_managed_region_events(lines, start_line, end_line)
+	
+	if not parsed_events or #parsed_events == 0 then
+		return
+	end
+	
+	-- Enrich events with time information and notes line numbers
+	local events = {}
+	for _, event in ipairs(parsed_events) do
+		local times = parser.parse_event_times(lines, event.start_line, event.end_line)
+		local notes_line = parser.find_notes_line(lines, event.start_line, event.end_line)
+		
+		-- Extract subject from header
+		local subject = ''
+		for i = event.start_line, event.end_line do
+			if lines[i]:match('^##%s+') then
+				subject = navigation.parse_subject_from_header(lines[i])
+				break
+			end
+		end
+		
+		table.insert(events, {
+			id = event.id,
+			times = times,
+			notes_line = notes_line,
+			subject = subject,
+			start_line = event.start_line,
+			end_line = event.end_line
+		})
+	end
+	
+	-- Get current cursor line
+	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+	
+	-- Find next meeting
+	local next_meeting = navigation.find_next_meeting_from_cursor(events, cursor_line)
+	
+	if next_meeting then
+		navigation.jump_to_notes(next_meeting)
+	end
+end
+
+-- jump_to_previous_meeting positions cursor on notes section of the previous meeting before cursor
+function M.jump_to_previous_meeting()
+	-- Get current buffer lines
+	local bufnr = 0  -- Current buffer
+	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+	
+	-- Find managed region
+	local start_line, end_line = parser.find_managed_region(lines)
+	if not start_line or not end_line then
+		return
+	end
+	
+	-- Parse existing events from managed region
+	local parsed_events = parser.parse_managed_region_events(lines, start_line, end_line)
+	
+	if not parsed_events or #parsed_events == 0 then
+		return
+	end
+	
+	-- Enrich events with time information and notes line numbers
+	local events = {}
+	for _, event in ipairs(parsed_events) do
+		local times = parser.parse_event_times(lines, event.start_line, event.end_line)
+		local notes_line = parser.find_notes_line(lines, event.start_line, event.end_line)
+		
+		-- Extract subject from header
+		local subject = ''
+		for i = event.start_line, event.end_line do
+			if lines[i]:match('^##%s+') then
+				subject = navigation.parse_subject_from_header(lines[i])
+				break
+			end
+		end
+		
+		table.insert(events, {
+			id = event.id,
+			times = times,
+			notes_line = notes_line,
+			subject = subject,
+			start_line = event.start_line,
+			end_line = event.end_line
+		})
+	end
+	
+	-- Get current cursor line
+	local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+	
+	-- Find previous meeting
+	local prev_meeting = navigation.find_previous_meeting_from_cursor(events, cursor_line)
+	
+	if prev_meeting then
+		navigation.jump_to_notes(prev_meeting)
+	end
+end
+
 return M
